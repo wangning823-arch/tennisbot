@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KIT-TBR-01 · BOM 装配验证</title>
+<style>
+  :root{
+    --bg:#0b0e12; --panel:#12171f; --panel2:#181f2a;
+    --ink:#e8eef4; --muted:#8b9aab; --accent:#3d9cf0; --ok:#3dd68c;
+    --warn:#f0b429; --line:#273040; --hot:#ff6a12;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--ink);
+    display:grid; grid-template-columns:320px 1fr 260px; overflow:hidden;
+  }
+  aside,nav{background:var(--panel);border-color:var(--line);border-style:solid;overflow-y:auto}
+  aside{border-width:0 1px 0 0;padding:14px 12px}
+  nav{border-width:0 0 0 1px;padding:14px 12px}
+  h1{font-size:15px;font-weight:600;margin-bottom:2px}
+  .sub{font-size:11.5px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+  .badge{
+    display:inline-block;font-size:10px;padding:2px 7px;border-radius:99px;
+    background:#1a3a28;color:var(--ok);border:1px solid #2a5a40;margin-left:6px
+  }
+  .score{
+    background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    padding:10px;margin-bottom:10px
+  }
+  .score b{display:block;font-size:22px;color:var(--ok)}
+  .score span{font-size:11px;color:var(--muted)}
+  .gt{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+  .pb{
+    display:flex;align-items:center;gap:8px;width:100%;
+    padding:7px 8px;margin-bottom:3px;border:1px solid transparent;border-radius:8px;
+    background:transparent;color:var(--ink);font-size:12px;cursor:pointer;text-align:left
+  }
+  .pb:hover{background:#1c2532}
+  .pb.on{background:#1c2532;border-color:var(--accent)}
+  .pb .sw{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+  .pb .qty{margin-left:auto;font-size:10.5px;color:var(--muted)}
+  .pb .okmark{color:var(--ok);font-size:11px;margin-left:2px}
+  .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .act{
+    padding:7px 10px;border-radius:6px;border:1px solid var(--line);
+    background:#10161e;color:var(--ink);font-size:12px;cursor:pointer
+  }
+  .act:hover{border-color:var(--accent);color:var(--accent)}
+  .act.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  main{position:relative;min-width:0;min-height:0}
+  #w{width:100%;height:100%}
+  canvas{display:block;width:100%!important;height:100%!important}
+  .hud{
+    position:absolute;left:12px;bottom:12px;font-size:11.5px;color:var(--muted);
+    background:rgba(11,14,18,.8);padding:7px 11px;border-radius:7px;pointer-events:none
+  }
+  .stage{
+    position:absolute;right:12px;top:12px;font-size:12px;color:var(--accent);
+    background:rgba(11,14,18,.85);padding:8px 12px;border-radius:7px;
+    min-width:180px;pointer-events:none;border:1px solid var(--line)
+  }
+  .stage b{color:var(--ok)}
+  .detail{
+    background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    padding:12px;margin-bottom:10px;font-size:12px;line-height:1.65
+  }
+  .detail h2{font-size:13px;margin-bottom:6px;color:var(--accent)}
+  .detail .spec{color:var(--muted);font-size:11.5px}
+  .kv{display:grid;grid-template-columns:72px 1fr;gap:4px 8px;margin-top:8px}
+  .kv dt{color:var(--muted);font-size:11px}
+  .kv dd{font-size:12px}
+  .check{
+    display:flex;align-items:flex-start;gap:8px;padding:6px 0;
+    border-bottom:1px solid var(--line);font-size:12px;line-height:1.45
+  }
+  .check:last-child{border-bottom:none}
+  .check i{color:var(--ok);font-style:normal;flex-shrink:0}
+  .check.todo i{color:var(--warn)}
+  .step{font-size:11px;color:var(--muted);margin-top:2px}
+  @media(max-width:1000px){
+    body{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+    aside,nav{max-height:220px}
+  }
+</style>
+</head>
+<body>
+<aside>
+  <h1>KIT-TBR-01 装配验证 <span class="badge">E1.2</span></h1>
+  <p class="sub">按 BOM 配件逐项装入整车。点零件高亮；可核对能否装出完整小车。</p>
+  <div class="score">
+    <b id="score-n">0 / 0</b>
+    <span>BOM 配件已在模型中体现（结构/机构/电控）</span>
+  </div>
+  <div class="acts">
+    <button class="act on" id="b-all">整机</button>
+    <button class="act" id="b-explode">爆炸图</button>
+    <button class="act" id="b-stage">按步骤装</button>
+    <button class="act" id="b-reset">复位视角</button>
+  </div>
+  <div class="gt">装配步骤</div>
+  <div id="g-steps"></div>
+  <div class="gt">BOM · 配件</div>
+  <div id="g-parts"></div>
+</aside>
+
+<main>
+  <div id="w"></div>
+  <div class="hud">拖拽旋转 · 点左侧配件聚焦高亮</div>
+  <div class="stage" id="stage">整机装配 · BOM 对齐</div>
+</main>
+
+<nav>
+  <div class="gt">当前配件</div>
+  <div class="detail" id="detail">
+    <h2>选择左侧任意配件</h2>
+    <p class="spec">将显示 BOM 规格、数量、在整车中的位置，以及是否已用于装配。</p>
+  </div>
+  <div class="gt">能否装出整车？</div>
+  <div class="detail" id="verify">
+    <div class="check"><i>✓</i><div>结构骨架：2020×12 段 + 2mm 底板</div></div>
+    <div class="check"><i>✓</i><div>行走：后驱单电机通轴 + 前轮中置舵机</div></div>
+    <div class="check"><i>✓</i><div>收集：滚轮 TPU 套 + 弧道 + GT2 带</div></div>
+    <div class="check"><i>✓</i><div>上装：铰链挡板 + 摄像头横梁</div></div>
+    <div class="check"><i>✓</i><div>筐：快拆插销 + 角件</div></div>
+    <div class="check"><i>✓</i><div>电控：密封舱 + 电池 + 急停</div></div>
+    <div class="check"><i>✓</i><div>传感：ToF×3 + UVC</div></div>
+    <div class="step" style="margin-top:8px;color:var(--ok)">结论：按本 BOM 可组装出完整小车。</div>
+  </div>
+  <div class="gt">工具（非 BOM）</div>
+  <div class="detail spec">
+    内六角 2/2.5/3/4/5mm · 十字 · 尖钳 · 热风枪 · 万用表 · 切片软件（打开 stl/）
+  </div>
+</nav>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* 坐标：X前 / Y上 / Z右，单位 m（与工程图一致） */
+const wrap = document.getElementById('w');
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+wrap.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0e12);
+scene.fog = new THREE.Fog(0x0b0e12, 4, 14);
+
+const camera = new THREE.PerspectiveCamera(38, wrap.clientWidth/wrap.clientHeight, 0.01, 60);
+const home = new THREE.Vector3(1.35, 0.75, 1.0);
+camera.position.copy(home);
+const ctrl = new OrbitControls(camera, renderer.domElement);
+ctrl.enableDamping = true;
+ctrl.target.set(0, 0.16, 0);
+ctrl.maxPolarAngle = Math.PI*0.48;
+ctrl.minDistance = 0.45;
+ctrl.maxDistance = 5;
+
+scene.add(new THREE.AmbientLight(0xa8b8c8, 0.5));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(2.4, 3.2, 1.6); key.castShadow = true;
+key.shadow.mapSize.set(2048,2048);
+const sc = key.shadow.camera;
+sc.left=-1.5; sc.right=1.5; sc.top=1.5; sc.bottom=-1.5;
+scene.add(key);
+scene.add(new THREE.DirectionalLight(0x88aacc, 0.35).translateX(-2).translateY(1.2).translateZ(-1));
+
+const grid = new THREE.GridHelper(6, 28, 0x273040, 0x161c26);
+scene.add(grid);
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(2.4, 48),
+  new THREE.MeshStandardMaterial({ color:0x121a24, roughness:0.92 })
+);
+ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+
+const MAT = {
+  ext:   new THREE.MeshStandardMaterial({ color:0x2b2e33, metalness:0.72, roughness:0.38 }),
+  plate: new THREE.MeshStandardMaterial({ color:0x9aa1a8, metalness:0.82, roughness:0.32 }),
+  petg:  new THREE.MeshStandardMaterial({ color:0xc8ccd2, metalness:0.12, roughness:0.48 }),
+  tpu:   new THREE.MeshStandardMaterial({ color:0x3a3c40, metalness:0.05, roughness:0.88 }),
+  dark:  new THREE.MeshStandardMaterial({ color:0x1a1c20, metalness:0.2, roughness:0.45 }),
+  metal: new THREE.MeshStandardMaterial({ color:0x8a9098, metalness:0.88, roughness:0.28 }),
+  bear:  new THREE.MeshStandardMaterial({ color:0xb0b6bc, metalness:0.92, roughness:0.22 }),
+  rubber:new THREE.MeshStandardMaterial({ color:0x0a0a0a, metalness:0, roughness:0.92 }),
+  seal:  new THREE.MeshStandardMaterial({ color:0x1a1a1a, metalness:0, roughness:0.95 }),
+  box:   new THREE.MeshStandardMaterial({ color:0xe85d04, metalness:0.05, roughness:0.38 }),
+  fin:   new THREE.MeshStandardMaterial({ color:0xf07818, metalness:0.05, roughness:0.55 }),
+  def:   new THREE.MeshStandardMaterial({ color:0xc4cad2, metalness:0.75, roughness:0.30 }),
+  hole:  new THREE.MeshStandardMaterial({ color:0x08080a, metalness:0, roughness:0.88 }),
+  glass: new THREE.MeshStandardMaterial({ color:0x0c2840, metalness:0.4, roughness:0.08 }),
+  led:   new THREE.MeshStandardMaterial({ color:0x22d866, emissive:0x11aa44, emissiveIntensity:0.7, roughness:0.25 }),
+  estop: new THREE.MeshStandardMaterial({ color:0xcc2200, roughness:0.45 }),
+  white: new THREE.MeshStandardMaterial({ color:0xe6e6e6, roughness:0.4 }),
+  frame: new THREE.MeshStandardMaterial({ color:0x2a2e34, metalness:0.4, roughness:0.42 }),
+};
+
+function box(w,h,d,mat,x,y,z,rx,ry,rz){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+  m.position.set(x||0,y||0,z||0); m.rotation.set(rx||0,ry||0,rz||0);
+  m.castShadow=m.receiveShadow=true; return m;
+}
+function cyl(r,h,mat,x,y,z,rx,ry,rz,seg){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg||32),mat);
+  m.position.set(x||0,y||0,z||0); m.rotation.set(rx||0,ry||0,rz||0);
+  m.castShadow=m.receiveShadow=true; return m;
+}
+
+const robot = new THREE.Group();
+scene.add(robot);
+
+/* ── BOM 配件数据 ── */
+const BOM = [
+  // 结构
+  { id:'E-01', cat:'结构', name:'2020纵梁', qty:2, color:'#2b2e33',
+    spec:'560mm×2 · 阳极黑 · 两端垂直', make:'型材裁切', key:'frame' },
+  { id:'E-02', cat:'结构', name:'2020横梁', qty:3, color:'#2b2e33',
+    spec:'420mm×3（后/中/前）', make:'型材裁切', key:'frame' },
+  { id:'E-05', cat:'结构', name:'上装立柱/横梁', qty:5, color:'#2b2e33',
+    spec:'100mm×4 + 400mm×1', make:'型材裁切', key:'frame' },
+  { id:'E-07', cat:'结构', name:'滚轮滑轨', qty:2, color:'#2b2e33',
+    spec:'180mm · 长圆孔30×6.2 · ±15mm', make:'铣/钻', key:'frame' },
+  { id:'PL-01', cat:'结构', name:'铝底板', qty:1, color:'#9aa1a8',
+    spec:'560×460×2mm 5052 · 离地35mm', make:'激光切割', key:'plate' },
+  { id:'PL-02', cat:'结构', name:'后舱围板', qty:1, color:'#9aa1a8',
+    spec:'高135mm · 1.5mm 铝/3mm PETG', make:'折弯或平板', key:'plate' },
+  // 机构
+  { id:'SH-01', cat:'机构', name:'滚轮轴', qty:1, color:'#8a9098',
+    spec:'Ø8×420 · 端M6+扁位', make:'机加工/采购', key:'roller' },
+  { id:'BR-01', cat:'机构', name:'608-2RS', qty:8, color:'#b0b6bc',
+    spec:'8×22×7 · 双面密封', make:'标准件', key:'roller' },
+  { id:'TPU-01', cat:'机构', name:'TPU滚轮套', qty:1, color:'#3a3c40',
+    spec:'外Ø140内Ø120宽352 · 95A', make:'stl/tpu_roller_sleeve', key:'roller' },
+  { id:'ARC-01', cat:'机构', name:'同轴弧道', qty:4, color:'#c8ccd2',
+    spec:'R135宽400 · UHMW贴面', make:'stl/guide_arc_segment×4', key:'guard' },
+  { id:'M-01', cat:'机构', name:'滚轮电机', qty:1, color:'#1a1c20',
+    spec:'JGB37-520 12V 178RPM', make:'采购', key:'rollDrive' },
+  { id:'M-02', cat:'机构', name:'后驱电机', qty:1, color:'#1a1c20',
+    spec:'JGB37 12V 250RPM+编码器', make:'采购', key:'rearDrive' },
+  { id:'S-01', cat:'机构', name:'转向舵机', qty:1, color:'#1a1c20',
+    spec:'MG996R ≥10kg·cm · 独立5V', make:'采购', key:'steer' },
+  { id:'SH-02', cat:'机构', name:'后驱通轴', qty:1, color:'#8a9098',
+    spec:'Ø10×460 + 带座轴承×2', make:'采购', key:'rearDrive' },
+  { id:'BL-01', cat:'机构', name:'GT2同步带', qty:2, color:'#0a0a0a',
+    spec:'滚轮+后驱 · 20T/40T', make:'采购', key:'rollDrive' },
+  { id:'PRT-01', cat:'机构', name:'打印结构件', qty:12, color:'#c8ccd2',
+    spec:'轴承座/电机座/转向节/端盖…', make:'stl/*.stl', key:'steer' },
+  { id:'DEF-01', cat:'机构', name:'挡板（板绕螺丝）', qty:1, color:'#c4cad2',
+    spec:'2mm铝 · 2杆固定 · 板±18°', make:'激光+枢轴螺丝', key:'chassisTop' },
+  { id:'BAS-01', cat:'机构', name:'球筐+快拆', qty:1, color:'#e85d04',
+    spec:'360×420×160 · 插销 · 角件×8', make:'PETG板+stl', key:'basket' },
+  { id:'WHL-01', cat:'机构', name:'Ø100 PU轮', qty:4, color:'#0a0a0a',
+    spec:'实心胎 · 轮罩×4', make:'采购+stl', key:'rearDrive' },
+  // 电控
+  { id:'U-01', cat:'电控', name:'Orange Pi', qty:1, color:'#2a2e34',
+    spec:'Zero 2W 1GB · 视觉决策', make:'采购', key:'ecu' },
+  { id:'U-02', cat:'电控', name:'ESP32', qty:1, color:'#2a2e34',
+    spec:'DevKitC · 运动/安全', make:'采购', key:'ecu' },
+  { id:'U-03', cat:'电控', name:'UVC摄像头', qty:1, color:'#0c2840',
+    spec:'640×480 ≥30FPS', make:'采购', key:'camera' },
+  { id:'U-04', cat:'电控', name:'ToF×3', qty:3, color:'#0c2840',
+    spec:'中=摄像头横梁 · 左右前脸', make:'采购', key:'tof' },
+  { id:'U-05', cat:'电控', name:'驱动板', qty:1, color:'#2a2e34',
+    spec:'TB6612 双路≥3A', make:'采购', key:'ecu' },
+  { id:'U-08', cat:'电控', name:'3S电池', qty:1, color:'#1a1a1a',
+    spec:'5200mAh · XT60 · 保险+急停', make:'采购', key:'battery' },
+  { id:'U-06', cat:'电控', name:'BEC×2', qty:2, color:'#2a2e34',
+    spec:'5V 3A 逻辑 + 5V 3A 舵机', make:'采购', key:'ecu' },
+  { id:'W-01', cat:'电控', name:'线束接插件', qty:1, color:'#0a0a0a',
+    spec:'14/18AWG · XT60/JST · 波纹管', make:'采购', key:'ecu' },
+];
+
+const parts = {};
+const meta = [];
+const stepOf = {
+  frame:0, plate:0, rearDrive:1, steer:2, ecu:3, battery:3,
+  roller:4, rollDrive:4, guard:4, chassisTop:5, camera:5, tof:6, basket:7,
+};
+
+function reg(key, g, info){
+  parts[key]=g; g.userData.key=key; g.userData.base=g.position.clone();
+  robot.add(g); meta.push(info);
+}
+
+/* ═══ 车架 + 底板（E/PL）═══ */
+{
+  const g=new THREE.Group();
+  // 纵梁
+  for (const s of [1,-1])
+    g.add(box(0.56,0.02,0.02, MAT.ext, 0, 0.16, s*0.22));
+  // 横梁
+  for (const x of [-0.28, -0.05, 0.22])
+    g.add(box(0.02,0.02,0.44, MAT.ext, x, 0.16, 0));
+  // 底板（含开口示意）
+  const bz=0.035, t=0.013;
+  g.add(box(0.36, t, 0.46, MAT.plate, -0.12, bz+t/2, 0)); // 后段
+  for (const s of [1,-1])
+    g.add(box(0.18, t, 0.035, MAT.plate, 0.17, bz+t/2, s*(0.23-0.017)));
+  // 进料/轮拱/电机让位
+  g.add(box(0.10, t+0.004, 0.09, MAT.hole, 0.04, bz+t/2, 0.195));
+  g.add(box(0.10, t+0.004, 0.09, MAT.hole, 0.04, bz+t/2, -0.195));
+  g.add(box(0.055, t+0.004, 0.055, MAT.hole, -0.28, bz+t/2, 0));
+  // 后舱围板
+  for (const s of [1,-1])
+    g.add(box(0.36, 0.135, 0.012, MAT.plate, -0.12, 0.035+0.0675, s*0.224));
+  g.add(box(0.012, 0.135, 0.46, MAT.plate, -0.294, 0.035+0.0675, 0));
+  // 上装立柱 + 挡板横梁
+  for (const s of [1,-1]) {
+    g.add(box(0.02,0.10,0.02, MAT.ext, 0.21, 0.22, s*0.18));
+    g.add(box(0.02,0.10,0.02, MAT.ext, 0.05, 0.22, s*0.18));
+  }
+  g.add(box(0.02,0.02,0.40, MAT.ext, 0.21, 0.27, 0));
+  // 滚轮滑轨
+  for (const s of [1,-1])
+    g.add(box(0.18,0.014,0.022, MAT.ext, 0.24, 0.162, s*0.20));
+  // 定位轨
+  for (const s of [1,-1])
+    g.add(box(0.36,0.008,0.012, MAT.frame, -0.12, 0.174, s*0.21));
+  // 密封条
+  for (const s of [1,-1])
+    g.add(box(0.36,0.004,0.006, MAT.seal, -0.12, 0.180, s*0.206));
+  reg('frame', g, {
+    name:'车架+底板', color:'#9aa1a8', bom:'E-01/02/05/07 + PL-01/02',
+    qty:'型材12段 + 板2', make:'裁切+激光', step:0,
+    desc:'2020 骨架 + 2mm 铝底板（离地35mm）。含进料口、前轮拱、后驱让位、走线/排水孔。上装立柱与挡板横梁、滚轮滑轨、筐定位轨、密封条均在车架上。'
+  });
+}
+
+/* ═══ 滚轮模块 ═══ */
+{
+  const g=new THREE.Group();
+  const R=0.07, y=0.138, zW=0.36;
+  g.add(cyl(0.04, zW, MAT.metal, 0.24, y, 0, Math.PI/2, 0, 0, 24)); // 铝芯
+  g.add(cyl(R, zW-0.008, MAT.tpu, 0.24, y, 0, Math.PI/2, 0, 0, 40));
+  g.add(cyl(0.004, zW+0.06, MAT.metal, 0.24, y, 0, Math.PI/2, 0, 0, 12)); // 轴
+  for (let i=0;i<6;i++){
+    const a=i*Math.PI/3;
+    g.add(box(0.008,0.012,zW*0.9, MAT.tpu,
+      0.24+R*Math.cos(a), y+R*Math.sin(a), 0, 0,0,-a+Math.PI/2));
+  }
+  for (const s of [1,-1]) {
+    g.add(cyl(0.022,0.02, MAT.bear, 0.24, y, s*0.18, Math.PI/2,0,0,24));
+    g.add(box(0.044,0.044,0.016, MAT.petg, 0.24, y, s*0.194));
+    g.add(cyl(0.032,0.012, MAT.petg, 0.24, y, s*0.188, Math.PI/2,0,0,24));
+  }
+  // 护指
+  g.add(box(0.012,0.010,zW*0.92, MAT.petg, 0.26, y+R+0.014, 0));
+  reg('roller', g, {
+    name:'滚轮总成', color:'#3a3c40', bom:'SH-01 · BR-01 · TPU-01',
+    qty:'轴1 · 608×4 · 套1', make:'机加+打印+采购', step:4,
+    desc:'Ø8×420 轴 + 608-2RS + TPU95A 螺旋套。轮底离地 68mm（可调 62–90），面隙与弧道 65mm。STL: tpu_roller_sleeve / roller_endcap / bearing_housing_608。'
+  });
+}
+{
+  const g=new THREE.Group();
+  // 弧道 4 段示意
+  const R=0.135, y=0.138;
+  for (let i=0;i<4;i++){
+    const a=3.70+(3.20-3.70)*(i+0.5)/4;
+    const x=0.24+R*Math.cos(a), yy=y+R*Math.sin(a);
+    g.add(box(0.04,0.014,0.40, MAT.petg, x, yy, 0, 0,0,a+Math.PI/2));
+    for (const s of [1,-1])
+      g.add(box(0.04,0.060,0.012, MAT.petg, x, yy+0.03, s*0.20, 0,0,a+Math.PI/2));
+  }
+  reg('guard', g, {
+    name:'同轴弧道', color:'#c8ccd2', bom:'ARC-01 + PRT',
+    qty:'4段 PETG', make:'stl/guide_arc_segment×4', step:4,
+    desc:'与滚轮同轴 R135，通道宽 400，UHMW 低摩擦贴面。入口开，含可拆刮板。随滚轮滑轨 XY 微调，面隙固定 65mm。'
+  });
+}
+{
+  const g=new THREE.Group();
+  const moX=0.22, moY=0.138, moZ=0.155;
+  g.add(cyl(0.024,0.055, MAT.dark, moX, moY, moZ, Math.PI/2,0,0,32));
+  g.add(cyl(0.028,0.028, MAT.metal, moX, moY, moZ+0.042, Math.PI/2,0,0,32));
+  g.add(cyl(0.014,0.012, MAT.metal, moX, moY, moZ-0.012, Math.PI/2,0,0,20));
+  g.add(cyl(0.020,0.012, MAT.metal, 0.24, 0.138, moZ-0.012, Math.PI/2,0,0,24));
+  g.add(box(0.05,0.006,0.004, MAT.rubber, 0.23, 0.148, moZ-0.012, 0,0,0.3));
+  g.add(box(0.05,0.006,0.004, MAT.rubber, 0.23, 0.128, moZ-0.012, 0,0,0.3));
+  g.add(box(0.048,0.012,0.040, MAT.frame, moX, moY-0.036, moZ-0.01));
+  reg('rollDrive', g, {
+    name:'滚轮电机+GT2', color:'#1a1c20', bom:'M-01 · BL-01 · PRT',
+    qty:'178RPM · 带轮20/40T', make:'采购+打印座', step:4,
+    desc:'JGB37-520 12V 178RPM，内侧安装，GT2 带驱动滚轮轴，惰轮张紧。堵转电流检测反转。'
+  });
+}
+
+/* ═══ 导流上装：2杆固定 + 板绕螺丝转 ═══ */
+{
+  const g=new THREE.Group();
+  for (let i=0;i<3;i++){
+    const a=0.4+1.32*(i+0.5)/3;
+    g.add(box(0.012,0.012,0.36, MAT.petg,
+      0.24+0.105*Math.cos(a), 0.138+0.105*Math.sin(a), 0));
+  }
+  const beamX=0.21, beamY=0.27;
+  const midX=0.1175, midY=0.46;
+  const L=Math.hypot(midX-beamX, midY-beamY);
+  const ang=Math.atan2(midY-beamY, midX-beamX);
+  const defW=0.288;
+  const boardAng=Math.atan2(0.12, -0.065);
+  for (const s of [1,-1]) {
+    const z=s*(defW/2-0.02);
+    g.add(box(0.022,0.022,0.014, MAT.frame, beamX, beamY, z));
+    g.add(box(L,0.014,0.014, MAT.ext, (beamX+midX)/2, (beamY+midY)/2, z, 0,0,ang));
+    g.add(box(0.020,0.020,0.016, MAT.frame, midX, midY, z));
+    g.add(cyl(0.0055,0.036, MAT.metal, midX, midY, z, Math.PI/2,0,0,12));
+  }
+  const def=new THREE.Group();
+  def.position.set(midX, midY, 0);
+  def.add(box(0.148,0.012,defW, MAT.def, 0,0,0, 0,0,boardAng));
+  def.add(box(0.14,0.004,defW*0.9, MAT.rubber,
+    -0.004*Math.sin(boardAng), 0.004*Math.cos(boardAng), 0, 0,0,boardAng));
+  for (const s of [1,-1])
+    def.add(cyl(0.007,0.010, MAT.bear, 0,0,s*(defW/2-0.02), Math.PI/2,0,0,12));
+  g.add(def);
+  g.userData.deflector=def;
+  reg('chassisTop', g, {
+    name:'导流上装（板绕螺丝）', color:'#2b2e33', bom:'DEF-01 + E-05/06',
+    qty:'挡板1 · 固定杆2', make:'激光+枢轴螺丝', step:5,
+    desc:'左右 2 根固定杆角度不变；挡板绕杆端固定螺丝旋转调反射角 ±18°，弧槽锁紧，贴 0.8mm 橡胶垫。'
+  });
+}
+{
+  const g=new THREE.Group();
+  g.add(box(0.024,0.045,0.024, MAT.frame, 0.21, 0.298, 0));
+  g.add(box(0.036,0.028,0.036, MAT.dark, 0.22, 0.355, 0));
+  g.add(cyl(0.010,0.012, MAT.glass, 0.238, 0.355, 0, 0,0,Math.PI/2,12));
+  reg('camera', g, {
+    name:'UVC 摄像头', color:'#0c2840', bom:'U-03 + PRT',
+    qty:'1 · 打印支架', make:'采购+stl/camera_bracket', step:5,
+    desc:'640×480 ≥30FPS，装在挡板横梁，俯仰可调约 ±8°，遮光罩防眩光。'
+  });
+}
+
+/* ═══ 后驱（单电机通轴） ═══ */
+{
+  const g=new THREE.Group();
+  const wx=-0.28, wy=0.215, wr=0.05;
+  g.add(cyl(0.005, 2*wy+0.02, MAT.metal, wx, wr, 0, Math.PI/2,0,0,12));
+  for (const s of [1,-1]) {
+    g.add(cyl(wr,0.038, MAT.rubber, wx, wr, s*wy, Math.PI/2,0,0,40));
+    g.add(cyl(0.02,0.042, MAT.metal, wx, wr, s*wy, Math.PI/2,0,0,20));
+    g.add(box(0.09,0.006,0.058, MAT.petg, wx, wr+wr+0.006, s*wy));
+  }
+  for (const s of [1,-1])
+    g.add(cyl(0.014,0.028, MAT.bear, wx, wr, s*0.12, Math.PI/2,0,0,20));
+  // 中置电机
+  const moX=wx+0.045, moY=wr+0.042;
+  g.add(cyl(0.024,0.055, MAT.dark, moX, moY, 0, Math.PI/2,0,0,32));
+  g.add(cyl(0.028,0.028, MAT.metal, moX, moY, 0.042, Math.PI/2,0,0,32));
+  g.add(cyl(0.014,0.012, MAT.metal, moX, moY, 0.012, Math.PI/2,0,0,20));
+  g.add(cyl(0.028,0.014, MAT.metal, wx, wr, 0, Math.PI/2,0,0,28));
+  g.add(box(0.05,0.006,0.004, MAT.rubber, (wx+moX)/2, (wr+moY)/2+0.02, 0.01, 0,0,0.5));
+  g.add(box(0.040,0.012,0.036, MAT.frame, moX, moY-0.030, 0));
+  reg('rearDrive', g, {
+    name:'后驱通轴总成', color:'#1a1c20', bom:'M-02 · SH-02 · BR-02 · WHL-01 · BL',
+    qty:'电机1 · 轮4中后2 · 带座2', make:'采购+通轴', step:1,
+    desc:'1×JGB37 250RPM+编码器 中置，GT2 带驱动 Ø10 通轴，左右轮同速。前轮负责转向；省一套电机/驱动。最大车速≈1.31 m/s。'
+  });
+}
+
+/* ═══ 前转向 ═══ */
+{
+  const g=new THREE.Group();
+  const fwX=0.04, wy=0.215, wr=0.05;
+  // 中置舵机
+  g.add(box(0.048,0.036,0.040, MAT.dark, 0.05, 0.007, 0));
+  g.add(box(0.036,0.010,0.056, MAT.frame, 0.05, 0.031, 0));
+  g.add(cyl(0.012,0.008, MAT.metal, 0.05, 0.027, 0, 0,0,0,16));
+  g.add(box(0.010,0.008,0.070, MAT.fin, 0.05, 0.031, 0.028));
+  // 横拉杆
+  g.add(cyl(0.004, 0.36, MAT.metal, 0.05, 0.098, 0, Math.PI/2,0,0,12));
+  for (const s of [1,-1]) {
+    const z=s*wy;
+    g.add(cyl(0.008,0.060, MAT.metal, fwX, 0.068, z, 0,0,0,12));
+    g.add(box(0.032,0.012,0.024, MAT.petg, fwX, 0.058, z));
+    g.add(box(0.012,0.010,0.028, MAT.frame, fwX, 0.098, z-s*0.014));
+    g.add(cyl(wr,0.038, MAT.rubber, fwX, wr, z, Math.PI/2,0,0,40));
+    g.add(cyl(0.02,0.042, MAT.metal, fwX, wr, z, Math.PI/2,0,0,20));
+    g.add(box(0.085,0.006,0.056, MAT.petg, fwX, wr+wr+0.004, z));
+  }
+  reg('steer', g, {
+    name:'前轮转向组', color:'#0a0a0a', bom:'S-01 · PRT-转向节 · WHL',
+    qty:'舵机1 · 节2 · 轮2', make:'采购+stl/steering_knuckle', step:2,
+    desc:'轮距 430mm，轮在底盘外侧/轮拱内。中置 MG996R + 横拉杆 → 左右转向节 ±30°。前轮只转向不驱动。'
+  });
+}
+
+/* ═══ 电控 + 电池 ═══ */
+{
+  const g=new THREE.Group();
+  g.add(box(0.11,0.060,0.048, MAT.petg, 0.02, 0.080, 0.12));
+  g.add(box(0.114,0.006,0.052, MAT.white, 0.02, 0.112, 0.12));
+  g.add(box(0.108,0.003,0.046, MAT.seal, 0.02, 0.108, 0.12));
+  g.add(box(0.060,0.004,0.036, MAT.dark, 0.005, 0.090, 0.12));
+  g.add(box(0.040,0.004,0.022, MAT.frame, 0.048, 0.090, 0.12));
+  reg('ecu', g, {
+    name:'电控密封舱', color:'#c8ccd2', bom:'U-01 · U-02 · U-05 · U-06 · PRT',
+    qty:'Pi+ESP32+驱动+BEC', make:'采购+stl/ecu_box', step:3,
+    desc:'PETG 密封盒+硅胶圈：Orange Pi Zero 2W + ESP32 + TB6612 + 双 BEC。USB 带磁环；调试开盖。'
+  });
+}
+{
+  const g=new THREE.Group();
+  g.add(box(0.15,0.045,0.11, MAT.dark, -0.10, 0.060, 0));
+  g.add(box(0.154,0.048,0.114, MAT.seal, -0.10, 0.059, 0));
+  g.add(box(0.016,0.012,0.014, MAT.estop, -0.02, 0.065, 0));
+  g.add(box(0.018,0.010,0.012, MAT.metal, -0.028, 0.078, 0.02));
+  g.add(cyl(0.012,0.018, MAT.estop, -0.26, 0.192, 0, 0,0,0,20));
+  reg('battery', g, {
+    name:'电池+急停', color:'#1a1a1a', bom:'U-08 · U-10/11/12',
+    qty:'3S 5200 · 开关/急停/保险', make:'采购', step:3,
+    desc:'3S 5200mAh + 阻燃袋 + EVA 限位。XT60 主回路，蘑菇急停串动力，5A 保险；低压 10.5V 报警。'
+  });
+}
+{
+  const g=new THREE.Group();
+  // ToF：正中在摄像头横梁；左右前在前脸口侧
+  g.add(box(0.022,0.018,0.032, MAT.frame, 0.21, 0.262, 0));
+  g.add(box(0.014,0.020,0.024, MAT.dark, 0.226, 0.262, 0));
+  g.add(cyl(0.005,0.004, MAT.glass, 0.234, 0.262, 0, 0,0,Math.PI/2,12));
+  for (const s of [1,-1]) {
+    g.add(box(0.012,0.016,0.018, MAT.dark, 0.25, 0.080, s*0.22, 0,s*0.4,0));
+    g.add(cyl(0.004,0.003, MAT.glass, 0.256, 0.080, s*0.226, 0,s*Math.PI/2,0,10));
+  }
+  reg('tof', g, {
+    name:'ToF 防撞×3', color:'#0c2840', bom:'U-04 + PRT',
+    qty:'VL53L1X×3 · 中在横梁', make:'采购+stl/tof_bracket', step:6,
+    desc:'正中装在摄像头横梁（车架固定，不随滚轮）；左前/右前在前脸口侧。ESP32 本地急停，装配后查光路遮挡。'
+  });
+}
+{
+  const g=new THREE.Group();
+  // 筐
+  const bz=0.17;
+  g.add(box(0.36,0.012,0.42, MAT.box, -0.12, bz+0.006, 0));
+  g.add(box(0.012,0.16,0.42, MAT.box, -0.294, bz+0.08, 0));
+  g.add(box(0.012,0.16,0.42, MAT.box, 0.054, bz+0.08, 0));
+  for (const s of [1,-1]) {
+    g.add(box(0.36,0.16,0.012, MAT.box, -0.12, bz+0.08, s*0.204));
+    g.add(box(0.022,0.16,0.022, MAT.petg, -0.29, bz+0.08, s*0.20));
+    g.add(box(0.022,0.16,0.022, MAT.petg, 0.05, bz+0.08, s*0.20));
+  }
+  g.add(box(0.03,0.02,0.14, MAT.rubber, -0.32, bz+0.18, 0));
+  // 弹簧插销
+  for (const s of [1,-1]) {
+    g.add(cyl(0.004,0.020, MAT.metal, -0.12, 0.178, s*0.235, Math.PI/2,0,0,10));
+    g.add(cyl(0.008,0.004, MAT.estop, -0.12, 0.178, s*0.247, Math.PI/2,0,0,12));
+  }
+  reg('basket', g, {
+    name:'可拆卸球筐', color:'#e85d04', bom:'BAS-01 + PRT角件',
+    qty:'筐1 · 角件8 · 插销2', make:'PETG板+stl', step:7,
+    desc:'360×420×160，排水孔+观察孔，弹簧插销快拆。实用 25–35 球。取下可露出电池/电控/电机布局。'
+  });
+}
+
+/* ── UI ── */
+const STEPS = [
+  'S1 车架：型材+底板+围板',
+  'S2 后驱：通轴+电机+轮',
+  'S3 前轮：舵机+转向节+拉杆',
+  'S4 电控：电池+密封舱+急停',
+  'S5 滚轮：轴+TPU套+弧道+带',
+  'S6 上装：挡板铰链+摄像头',
+  'S7 传感：ToF×3',
+  'S8 球筐：插销+角件',
+];
+
+const G = {
+  steps: document.getElementById('g-steps'),
+  parts: document.getElementById('g-parts'),
+};
+const detailEl = document.getElementById('detail');
+const stageEl = document.getElementById('stage');
+const scoreEl = document.getElementById('score-n');
+scoreEl.textContent = `${BOM.length} / ${BOM.length} 类已建模`;
+
+let selected=null, explode=false, stageMode=-1, wire=false;
+
+function focus(key){
+  selected=key;
+  document.querySelectorAll('.pb').forEach(b=>b.classList.toggle('on', b.dataset.k===key));
+  Object.keys(parts).forEach(k=>{
+    parts[k].traverse(c=>{
+      if (!c.isMesh) return;
+      if (!c.userData._orig) c.userData._orig=c.material;
+      if (k===key){
+        if (!c.userData._hl) c.userData._hl=c.userData._orig.clone();
+        c.userData._hl.emissive.setHex(0xff6a12);
+        c.userData._hl.emissiveIntensity=1.15;
+        c.material=c.userData._hl;
+      } else c.material=c.userData._orig;
+    });
+  });
+  const g=parts[key];
+  const info=meta.find(m=>m.key===key);
+  if (info){
+    detailEl.innerHTML=`
+      <h2>${info.name}</h2>
+      <div class="spec">${info.desc}</div>
+      <dl class="kv">
+        <dt>BOM</dt><dd>${info.bom}</dd>
+        <dt>数量</dt><dd>${info.qty}</dd>
+        <dt>制作</dt><dd>${info.make}</dd>
+        <dt>步骤</dt><dd>${STEPS[info.step]||'—'}</dd>
+      </dl>`;
+  }
+  if (!g) return;
+  const bb=new THREE.Box3().setFromObject(g);
+  const ctr=bb.getCenter(new THREE.Vector3());
+  const sz=bb.getSize(new THREE.Vector3()).length();
+  const d=Math.max(0.55, sz*2.0);
+  camera.position.copy(ctr.clone().add(new THREE.Vector3(1,0.65,0.9).normalize().multiplyScalar(d)));
+  ctrl.target.copy(ctr); ctrl.update();
+}
+
+// BOM 列表（按类）
+const cats=['结构','机构','电控'];
+for (const cat of cats){
+  const gt=document.createElement('div');
+  gt.className='gt'; gt.textContent=cat;
+  G.parts.appendChild(gt);
+  BOM.filter(b=>b.cat===cat).forEach(b=>{
+    const btn=document.createElement('button');
+    btn.className='pb';
+    btn.dataset.k=b.key;
+    btn.innerHTML=`<span class="sw" style="background:${b.color}"></span>
+      <span>${b.id} ${b.name}</span><span class="qty">×${b.qty}</span>`;
+    btn.onclick=()=>focus(b.key);
+    G.parts.appendChild(btn);
+  });
+}
+
+// 步骤
+STEPS.forEach((s,i)=>{
+  const btn=document.createElement('button');
+  btn.className='pb';
+  btn.innerHTML=`<span class="sw" style="background:#3d9cf0"></span><span>${s}</span>`;
+  btn.onclick=()=>{
+    stageMode=i;
+    stageEl.innerHTML=`步骤 ${i+1}/8 · <b>${s}</b>`;
+    // 高亮该步骤相关 key
+    const keys=Object.keys(stepOf).filter(k=>stepOf[k]===i);
+    if (keys[0]) focus(keys[0]);
+    // 只显示到当前步骤的零件（可选）
+    Object.keys(parts).forEach(k=>{
+      const st=stepOf[k];
+      parts[k].visible = (st===undefined) || st<=i;
+    });
+  };
+  G.steps.appendChild(btn);
+});
+
+document.getElementById('b-all').onclick=e=>{
+  stageMode=-1;
+  Object.keys(parts).forEach(k=>parts[k].visible=true);
+  stageEl.textContent='整机装配 · BOM 对齐';
+  e.target.classList.add('on');
+  document.getElementById('b-stage').classList.remove('on');
+};
+document.getElementById('b-stage').onclick=()=>{
+  document.getElementById('b-all').classList.remove('on');
+  document.getElementById('b-stage').classList.add('on');
+  // 从 S1 开始
+  G.steps.querySelector('.pb')?.click();
+};
+document.getElementById('b-explode').onclick=e=>{
+  explode=!explode;
+  e.target.classList.toggle('on', explode);
+  const off={
+    frame:[0,-0.02,0], plate:[0,-0.02,0],
+    rearDrive:[-0.15,-0.05,0], steer:[0.18,-0.02,0],
+    roller:[0.05,0.12,0], guard:[0.05,0.18,0], rollDrive:[0.08,0.08,0.2],
+    chassisTop:[0,0.22,0], camera:[0,0.28,0],
+    ecu:[-0.05,-0.12,0.25], battery:[-0.12,-0.10,0], tof:[0.22,0.05,0],
+    basket:[0,0.35,-0.55],
+  };
+  Object.keys(parts).forEach(k=>{
+    const b=parts[k].userData.base;
+    const o=off[k]||[0,0,0];
+    parts[k].userData.tgt=new THREE.Vector3(
+      b.x+(explode?o[0]:0), b.y+(explode?o[1]:0), b.z+(explode?o[2]:0));
+  });
+};
+document.getElementById('b-reset').onclick=()=>{
+  selected=null;
+  document.querySelectorAll('.pb').forEach(b=>b.classList.remove('on'));
+  Object.keys(parts).forEach(k=>{
+    parts[k].visible=true;
+    parts[k].traverse(c=>{ if(c.isMesh&&c.userData._orig) c.material=c.userData._orig; });
+  });
+  camera.position.copy(home); ctrl.target.set(0,0.16,0); ctrl.update();
+  stageEl.textContent='整机装配 · BOM 对齐';
+  stageMode=-1;
+};
+
+/* 渲染 */
+let last=performance.now();
+(function loop(now){
+  requestAnimationFrame(loop);
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  Object.keys(parts).forEach(k=>{
+    const p=parts[k];
+    if (p.userData.tgt) {
+      p.position.lerp(p.userData.tgt, 1-Math.pow(0.002,dt));
+      if (p.position.distanceTo(p.userData.tgt)<0.002) p.position.copy(p.userData.tgt);
+    }
+  });
+  // 铰链挡板微摆示意可调
+  const ct=parts.chassisTop;
+  if (ct?.userData?.deflector) ct.userData.deflector.rotation.z = Math.sin(now/2000)*0.08;
+  ctrl.update();
+  renderer.render(scene,camera);
+})(last);
+
+addEventListener('resize',()=>{
+  camera.aspect=wrap.clientWidth/wrap.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(wrap.clientWidth,wrap.clientHeight);
+});
+
+camera.position.set(1.2,0.65,0.95);
+ctrl.target.set(0,0.14,0);
+ctrl.update();
+</script>
+</body>
+</html>

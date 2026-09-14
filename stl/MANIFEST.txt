@@ -1,0 +1,18 @@
+KIT-TBR-01 打印件清单 (mm)
+生成脚本: generate_stl.py  （无需 Blender）
+切片: Cura / PrusaSlicer / Bambu Studio 直接打开 STL
+
+bearing_housing_608.stl × 4
+motor_mount_jgb37.stl × 2
+servo_mount_mg996.stl × 1
+steering_knuckle.stl × 2
+wheel_cover.stl × 4
+camera_bracket.stl × 1
+tof_bracket.stl × 3
+ecu_box.stl × 1
+ecu_lid.stl × 1
+finger_guard.stl × 1
+basket_corner.stl × 8
+roller_endcap.stl × 2
+guide_arc_segment.stl × 4
+tpu_roller_sleeve.stl × 1

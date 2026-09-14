@@ -116,14 +116,14 @@
       value="0.068" style="flex:1">
     <span id="rollz-val" style="font-size:11px;color:var(--muted);min-width:42px">68mm</span>
   </div>
-  <div style="font-size:11px;color:var(--muted);margin-bottom:4px">挡板角度（铰链）</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:4px">挡板角度（绕固定螺丝）</div>
   <div style="display:flex;align-items:center;gap:8px">
     <input id="def-slider" type="range" min="-18" max="18" step="1"
       value="0" style="flex:1">
     <span id="def-val" style="font-size:11px;color:var(--muted);min-width:42px">0°</span>
   </div>
   <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">
-    离地 3.5cm 挡球入底；轮底 &gt; 球径 Ø6.7 才能从轮下进入。挡板 2 杆铰链，可调反射角。
+    离地 3.5cm 挡球入底；轮底 &gt; Ø6.7 才能进料。挡板 2 杆固定不动，板绕螺丝调角；正中 ToF 在摄像头横梁。
   </p>
 </aside>
 
@@ -869,8 +869,8 @@ const rollerPivot = new THREE.Group();
     g.add(box(0.040, 0.014, 0.032, MAT.frame, D.beamX, D.bodyTop + 0.006, railZ));
   }
 
-  // 60°挡板：2 杆铰链吊在横梁上，可调反射角
-  // 铰链原点 = 横梁 (beamX, beamH)，绕 Z 旋转
+  // 60°挡板：2 根固定杆（角度不变）+ 板绕固定螺丝旋转
+  // 杆：横梁 → 板中心枢轴点；板：仅绕枢轴螺丝转
   const dx = D.deflectorX1 - D.deflectorX0;
   const dy = D.deflectorY1 - D.deflectorY0;
   const len = Math.hypot(dx, dy);
@@ -878,62 +878,53 @@ const rollerPivot = new THREE.Group();
   const midX = (D.deflectorX0 + D.deflectorX1) / 2;
   const midY = (D.deflectorY0 + D.deflectorY1) / 2;
   const defW = D.rollL * 0.80;
+  const armLen = Math.hypot(midX - D.beamX, midY - beamH);
+  const armAng = Math.atan2(midY - beamH, midX - D.beamX);
 
-  // 横梁上的铰链座（固定，不随角度转）
-  for (const s of [1, -1]) {
-    g.add(cyl(0.010, 0.018, MAT.bearing,
-      D.beamX, beamH, s * (defW / 2 - 0.02), Math.PI / 2, 0, 0, 16));
-    g.add(box(0.024, 0.024, 0.012, MAT.frame,
-      D.beamX, beamH, s * (defW / 2 - 0.02 + 0.012)));
-  }
-
-  // 挡板旋转体（铰链 + 2 杆 + 板），default 姿态对齐原 60° 位
-  const deflectorPivot = new THREE.Group();
-  deflectorPivot.position.set(D.beamX, beamH, 0);
-  g.add(deflectorPivot);
-  const localMidX = midX - D.beamX;
-  const localMidY = midY - beamH;
-  const armLen = Math.hypot(localMidX, localMidY);
-  const armAng = Math.atan2(localMidY, localMidX);
-
-  // 左右 2 根固定杆
+  // ── 固定杆（挂在车架，不随挡板角度转）──
   for (const s of [1, -1]) {
     const z = s * (defW / 2 - 0.02);
-    deflectorPivot.add(box(0.022, 0.022, 0.014, MAT.frame, 0, 0, z));
-    deflectorPivot.add(cyl(0.007, 0.012, MAT.metal, 0, 0, z, Math.PI / 2, 0, 0, 12));
-    deflectorPivot.add(box(armLen, 0.014, 0.014, MAT.extrusion,
-      localMidX / 2, localMidY / 2, z, 0, 0, armAng));
-    // 角度锁紧弧槽（示意）
-    deflectorPivot.add(box(armLen * 0.55, 0.004, 0.008, MAT.hole,
-      localMidX * 0.35, localMidY * 0.35, z + s * 0.008, 0, 0, armAng));
-    deflectorPivot.add(cyl(0.004, 0.010, MAT.metal,
-      localMidX * 0.35, localMidY * 0.35, z + s * 0.010, Math.PI / 2, 0, 0, 8));
-    // 板端夹块
-    deflectorPivot.add(box(0.018, 0.018, 0.016, MAT.frame, localMidX, localMidY, z));
+    // 横梁铰链座
+    g.add(box(0.022, 0.022, 0.014, MAT.frame, D.beamX, beamH, z));
+    g.add(cyl(0.007, 0.012, MAT.bearing, D.beamX, beamH, z, Math.PI / 2, 0, 0, 12));
+    // 固定杆
+    g.add(box(armLen, 0.014, 0.014, MAT.extrusion,
+      (D.beamX + midX) / 2, (beamH + midY) / 2, z, 0, 0, armAng));
+    // 杆端夹座（固定）
+    g.add(box(0.020, 0.020, 0.016, MAT.frame, midX, midY, z));
+    // 枢轴螺丝（贯穿挡板，杆不转、板绕此转）
+    g.add(cyl(0.0055, 0.036, MAT.metal, midX, midY, z, Math.PI / 2, 0, 0, 12));
+    g.add(cyl(0.008, 0.006, MAT.bearing, midX, midY, z + s * 0.020, Math.PI / 2, 0, 0, 6));
   }
 
-  // 挡板本体 + 橡胶垫 + 侧翻边
-  deflectorPivot.add(box(len, D.deflectorT, defW, MAT.def, localMidX, localMidY, 0, 0, 0, boardAng));
+  // ── 挡板本体：原点在枢轴（板中心），仅绕 Z 转 ──
+  const deflectorPivot = new THREE.Group();
+  deflectorPivot.position.set(midX, midY, 0);
+  g.add(deflectorPivot);
+  deflectorPivot.add(box(len, D.deflectorT, defW, MAT.def, 0, 0, 0, 0, 0, boardAng));
   deflectorPivot.add(box(len * 0.92, 0.004, defW * 0.9, MAT.rubber,
-    localMidX - 0.004 * Math.sin(boardAng), localMidY + 0.004 * Math.cos(boardAng),
-    0, 0, 0, boardAng));
+    -0.004 * Math.sin(boardAng), 0.004 * Math.cos(boardAng), 0, 0, 0, boardAng));
   for (const s of [1, -1]) {
     deflectorPivot.add(box(len, 0.036, 0.008, MAT.frame,
-      localMidX, localMidY - 0.010, s * (defW / 2 + 0.006), 0, 0, boardAng));
+      0, -0.010, s * (defW / 2 + 0.006), 0, 0, boardAng));
+    // 板上枢轴过孔环
+    deflectorPivot.add(cyl(0.007, 0.010, MAT.bearing, 0, 0, s * (defW / 2 - 0.02),
+      Math.PI / 2, 0, 0, 12));
+    // 角度锁紧弧槽（板上，绕枢轴）
+    deflectorPivot.add(box(0.048, 0.004, 0.008, MAT.hole,
+      0.028 * Math.cos(boardAng + 0.5), 0.028 * Math.sin(boardAng + 0.5),
+      s * (defW / 2 + 0.012), 0, 0, boardAng + 0.5));
   }
 
-  // 供动画/滑条使用
   deflectorRef = {
     pivot: deflectorPivot,
-    beamX: D.beamX,
-    beamY: beamH,
-    localMidX, localMidY, boardAng, len,
+    midX, midY, boardAng, len,
   };
 
   reg('chassisTop', g, {
-    name: '导流上装（铰链挡板）', color: '#2b2e33', dims: '2杆铰链 · 角度可调',
+    name: '导流上装（板绕螺丝）', color: '#2b2e33', dims: '2杆固定 · 板±18°',
     group: 'collect',
-    desc: '顶护板与横梁固定车架；挡板仅左右 2 杆，铰链挂在横梁上，侧栏可调反射角（±18°），橡胶垫降噪。'
+    desc: '左右 2 根固定杆角度不变；挡板绕杆端固定螺丝旋转调反射角（±18°），弧槽锁紧。橡胶垫降噪。'
   });
 }
 
@@ -1251,14 +1242,18 @@ const rollerPivot = new THREE.Group();
 }
 
 /* ══════════════════════════════════════
-   3c. 前向 ToF 防撞传感器
+   3c. ToF 防撞×3
+   正中：摄像头横梁（车架固定，不随滚轮）
+   左前/右前：前脸两侧，避开滚轮进料区
    ══════════════════════════════════════ */
 {
   const g = new THREE.Group();
-  // 正前 ToF
-  g.add(box(0.012, 0.018, 0.022, MAT.dark, D.bodyFront + 0.006, 0.085, 0));
-  g.add(cyl(0.005, 0.004, MAT.glass, D.bodyFront + 0.012, 0.085, 0, 0, 0, Math.PI/2, 12));
-  // 左前 / 右前斜向
+  // 正前 ToF：夹在挡板横梁上（与摄像头同梁，固定车架）
+  g.add(box(0.022, 0.018, 0.032, MAT.frame, D.beamX, D.beamY - 0.008, 0));
+  g.add(box(0.014, 0.020, 0.024, MAT.dark, D.beamX + 0.016, D.beamY - 0.008, 0));
+  g.add(cyl(0.005, 0.004, MAT.glass,
+    D.beamX + 0.024, D.beamY - 0.008, 0, 0, 0, Math.PI/2, 12));
+  // 左前 / 右前斜向（前脸口侧，不装滚轮上）
   for (const s of [1, -1]) {
     g.add(box(0.012, 0.016, 0.018, MAT.dark,
       D.bodyFront - 0.01, 0.080, s * (D.mouthW/2 + 0.02), 0, s * 0.4, 0));
@@ -1266,9 +1261,9 @@ const rollerPivot = new THREE.Group();
       D.bodyFront - 0.004, 0.080, s * (D.mouthW/2 + 0.026), 0, s * Math.PI/2, 0, 10));
   }
   reg('tof', g, {
-    name: 'ToF 防撞×3', color: '#0c2840', dims: 'VL53L1X · 0°/±30°',
+    name: 'ToF 防撞×3', color: '#0c2840', dims: '横梁中 + 左前/右前',
     group: 'body',
-    desc: 'VL53L1X ×3（前 / 左前 / 右前 30°）。ESP32 本地 50Hz 采样 + D_hard 急停；装配后做光路遮挡检查。'
+    desc: '正中 VL53L1X 装在摄像头横梁（车架固定，不随滚轮调高度）；左右前在前脸口侧。ESP32 本地 50Hz + D_hard 急停。'
   });
 }
 
@@ -1316,20 +1311,19 @@ function deflectorYAt(x) {
     if (t < 0 || t > 1) return null;
     return D.deflectorY0 + (D.deflectorY1 - D.deflectorY0) * t;
   }
-  const { pivot, beamX, beamY, localMidX, localMidY, boardAng, len } = deflectorRef;
+  // 板绕枢轴（板中心）转；固定杆不参与
+  const { pivot, midX, midY, boardAng, len } = deflectorRef;
   const rot = pivot.rotation.z;
   const hx = Math.cos(boardAng) * len / 2;
   const hy = Math.sin(boardAng) * len / 2;
   const c = Math.cos(rot), s = Math.sin(rot);
-  const lx0 = localMidX - hx, ly0 = localMidY - hy;
-  const lx1 = localMidX + hx, ly1 = localMidY + hy;
-  const x0 = beamX + c * lx0 - s * ly0;
-  const y0 = beamY + s * lx0 + c * ly0;
-  const x1 = beamX + c * lx1 - s * ly1;
-  const y1 = beamY + s * lx1 + c * ly1;
-  const dx = x1 - x0;
-  if (Math.abs(dx) < 1e-6) return null;
-  const t = (x - x0) / dx;
+  const ex = hx * c - hy * s;
+  const ey = hx * s + hy * c;
+  const x0 = midX - ex, y0 = midY - ey;
+  const x1 = midX + ex, y1 = midY + ey;
+  const dxb = x1 - x0;
+  if (Math.abs(dxb) < 1e-6) return null;
+  const t = (x - x0) / dxb;
   if (t < -0.02 || t > 1.02) return null;
   return y0 + (y1 - y0) * t;
 }

@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>网球捡球机器人 · 滚轮进球动画</title>
+<style>
+  :root{
+    --bg:#0e1218; --panel:#161c26; --ink:#e8eef4; --muted:#8b9aab;
+    --accent:#e85d04; --line:#273040; --ok:#3dd68c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--ink);
+    display:grid; grid-template-columns:300px 1fr; overflow:hidden;
+  }
+  aside{
+    background:var(--panel); border-right:1px solid var(--line);
+    padding:16px 14px; overflow-y:auto;
+  }
+  h1{font-size:15px;font-weight:600;margin-bottom:4px}
+  .sub{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+  .note{
+    background:#10161e;border:1px solid var(--line);border-radius:8px;
+    padding:10px;margin-bottom:12px;font-size:12px;line-height:1.7;
+  }
+  .note b{color:var(--accent)}
+  .note .ok{color:var(--ok)}
+  .stat{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+  .stat div{background:#10161e;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .stat b{display:block;font-size:16px;color:var(--accent)}
+  .stat span{font-size:11px;color:var(--muted)}
+  .gt{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+  .pb{
+    display:flex;align-items:center;gap:8px;width:100%;
+    padding:8px 9px;margin-bottom:3px;
+    border:1px solid transparent;border-radius:8px;
+    background:transparent;color:var(--ink);font-size:12.5px;cursor:pointer;text-align:left;
+  }
+  .pb:hover{background:#1c2532}.pb.on{background:#1c2532;border-color:var(--accent)}
+  .sw{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+  .dm{font-size:10.5px;color:var(--muted);margin-left:auto}
+  .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .act{
+    padding:7px 10px;border-radius:6px;border:1px solid var(--line);
+    background:#10161e;color:var(--ink);font-size:12px;cursor:pointer;
+  }
+  .act:hover{border-color:var(--accent);color:var(--accent)}
+  .act.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  main{position:relative;min-width:0;min-height:0}
+  #w{width:100%;height:100%}
+  canvas{display:block;width:100%!important;height:100%!important}
+  .hud{
+    position:absolute;left:14px;bottom:14px;font-size:11.5px;color:var(--muted);
+    background:rgba(14,18,24,.75);padding:7px 11px;border-radius:7px;pointer-events:none;
+  }
+  .phase{
+    position:absolute;right:14px;top:14px;font-size:12px;color:var(--ok);
+    background:rgba(14,18,24,.75);padding:8px 12px;border-radius:7px;
+    min-width:160px;pointer-events:none;
+  }
+  @media(max-width:760px){
+    body{grid-template-columns:1fr;grid-template-rows:1fr 190px}
+    aside{order:2;border-right:none;border-top:1px solid var(--line)}
+  }
+</style>
+</head>
+<body>
+<aside>
+  <h1>网球捡球机器人</h1>
+  <p class="sub">矮平台车体 + 可拆卸球筐 + 前部滚轮<br/>捡满后整筐取走，换空筐继续</p>
+
+  <div class="note">
+    <b>咬球间隙 6.5cm · 上装挂车架</b><br/>
+    轮面→弧面 6.5cm（略&lt;球Ø6.7，便于咬住）<br/>
+    <span class="ok">①</span> 贴地接近<br/>
+    <span class="ok">②</span> 轮底拖到轮后<br/>
+    <span class="ok">③</span> 沿同轴弧上升<br/>
+    <span class="ok">④</span> 竖直撞挡板 → 入筐<br/>
+    <span style="color:var(--muted)">护板+挡板同在车架；弧道随滚轮滑条</span>
+  </div>
+
+  <div class="stat">
+    <div><b>间隙6.5cm</b><span>略小于球径·咬球</span></div>
+    <div><b>护板挂车架</b><span>平台顶立柱</span></div>
+    <div><b>挡板挂车架</b><span>横梁吊装·不随轮</span></div>
+    <div><b>弧道随轮</b><span>与滚轮同轴联动</span></div>
+  </div>
+
+  <div class="gt">车体</div><div id="g-body"></div>
+  <div class="gt">球筐（可拆）</div><div id="g-basket"></div>
+  <div class="gt">收集</div><div id="g-collect"></div>
+  <div class="gt">行走 / 电控</div><div id="g-drive"></div>
+
+  <div class="acts">
+    <button class="act on" id="b-anim">暂停动画</button>
+    <button class="act" id="b-basket">取下球筐</button>
+    <button class="act" id="b-wi">线框</button>
+    <button class="act on" id="b-gr">地面</button>
+    <button class="act" id="b-reset">复位视角</button>
+  </div>
+  <div class="gt" style="margin-top:10px">滚轮位置微调</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+    <input id="roll-slider" type="range" min="0.21" max="0.27" step="0.005"
+      value="0.24" style="flex:1">
+    <span id="roll-val" style="font-size:11px;color:var(--muted);min-width:42px">0.24</span>
+  </div>
+</aside>
+
+<main>
+  <div id="w"></div>
+  <div class="hud">拖拽旋转 · 点零件聚焦</div>
+  <div class="phase" id="phase">滚轮转动中…</div>
+</main>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* 坐标：X前 / Y上 / Z左右
+   圆柱默认轴Y；rx=π/2 → 轴沿Z（左右） */
+
+const wrap = document.getElementById('w');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+wrap.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e1218);
+scene.fog = new THREE.Fog(0x0e1218, 3.5, 12);
+
+const camera = new THREE.PerspectiveCamera(36, wrap.clientWidth/wrap.clientHeight, 0.01, 60);
+const homePos = new THREE.Vector3(1.20, 0.60, 0.85);
+camera.position.copy(homePos);
+
+const ctrl = new OrbitControls(camera, renderer.domElement);
+ctrl.enableDamping = true;
+ctrl.target.set(0, 0.16, 0);
+ctrl.maxPolarAngle = Math.PI * 0.48;
+ctrl.minDistance = 0.4;
+ctrl.maxDistance = 4;
+
+scene.add(new THREE.AmbientLight(0xa8b8c8, 0.45));
+const key = new THREE.DirectionalLight(0xffffff, 1.75);
+key.position.set(2.2, 3.2, 1.4);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+const sc = key.shadow.camera;
+sc.left = -1.4; sc.right = 1.4; sc.top = 1.4; sc.bottom = -1.4;
+scene.add(key);
+scene.add(new THREE.DirectionalLight(0x88aacc, 0.4).translateX(-2).translateY(1.3).translateZ(-1));
+const rim = new THREE.DirectionalLight(0xffaa66, 0.3);
+rim.position.set(0, 0.5, -2);
+scene.add(rim);
+
+const grid = new THREE.GridHelper(6, 28, 0x273040, 0x161c26);
+scene.add(grid);
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(2.2, 64),
+  new THREE.MeshStandardMaterial({ color: 0x152232, roughness: 0.9 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const lineMat = new THREE.MeshStandardMaterial({ color: 0xcfd6de, roughness: 0.55 });
+function courtLine(w, d, x, z) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.004, d), lineMat);
+  m.position.set(x, 0.002, z);
+  scene.add(m);
+}
+courtLine(2.4, 0.05, 0, 0.9);
+courtLine(0.05, 2.4, 0.9, 0);
+
+const MAT = {
+  shell:  new THREE.MeshStandardMaterial({ color: 0xd2d4d8, metalness: 0.08, roughness: 0.40 }),
+  box:    new THREE.MeshStandardMaterial({ color: 0xe85d04, metalness: 0.05, roughness: 0.38 }),
+  dark:   new THREE.MeshStandardMaterial({ color: 0x1a1c20, metalness: 0.2,  roughness: 0.45 }),
+  roll:   new THREE.MeshStandardMaterial({ color: 0x2a2a2e, metalness: 0.1,  roughness: 0.78 }),
+  fin:    new THREE.MeshStandardMaterial({ color: 0xf07818, metalness: 0.05, roughness: 0.55 }),
+  rubber: new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0,    roughness: 0.92 }),
+  metal:  new THREE.MeshStandardMaterial({ color: 0x8a9098, metalness: 0.88, roughness: 0.28 }),
+  hole:   new THREE.MeshStandardMaterial({ color: 0x08080a, metalness: 0,    roughness: 0.88 }),
+  mesh:   new THREE.MeshStandardMaterial({ color: 0x8c9094, metalness: 0.65, roughness: 0.35 }),
+  def:    new THREE.MeshStandardMaterial({ color: 0xc4cad2, metalness: 0.75, roughness: 0.30 }),
+  ball:   new THREE.MeshStandardMaterial({ color: 0xb8d84a, metalness: 0,    roughness: 0.62 }),
+  ballHot:new THREE.MeshStandardMaterial({
+    color: 0xd4f06a, emissive: 0x557711, emissiveIntensity: 0.35, roughness: 0.55
+  }),
+  white:  new THREE.MeshStandardMaterial({ color: 0xe6e6e6, metalness: 0,    roughness: 0.4 }),
+  glass:  new THREE.MeshStandardMaterial({ color: 0x0c2840, metalness: 0.4,  roughness: 0.08 }),
+  led:    new THREE.MeshStandardMaterial({
+    color: 0x22d866, emissive: 0x11aa44, emissiveIntensity: 0.75, roughness: 0.25
+  }),
+  frame:  new THREE.MeshStandardMaterial({ color: 0x2a2e34, metalness: 0.4, roughness: 0.42 }),
+};
+
+// ── 尺寸 ──
+const D = {
+  // 车体：矮平台，仅略高于底盘，用来放筐
+  bodyX0: -0.30, bodyL: 0.56, bodyW: 0.46, bodyH: 0.11,
+  bodyZ: 0.06,
+  get bodyTop() { return this.bodyZ + this.bodyH; },  // 0.17
+  get bodyCx() { return this.bodyX0 + this.bodyL / 2; },
+  get bodyFront() { return this.bodyX0 + this.bodyL; }, // 0.26
+
+  mouthW: 0.40, mouthH: 0.12, mouthZ: 0.06,
+
+  // 滚轮（X 可微调，与弧道同轴联动）
+  // 默认 0.24：出口 x≈rollX−R≈0.105，在筐前壁(0.06)外侧
+  rollD: 0.14, rollL: 0.36, rollX: 0.24, rollZ: 0.13,
+  finN: 8, finH: 0.012,
+
+  // 弧道：与滚轮同轴；轮面→弧面 6.5cm（略小于球径 Ø6.7，便于咬球）
+  guideGap: 0.065,              // 轮面→弧面 径向间隙
+  get guideR() { return this.rollD / 2 + this.guideGap; }, // 0.07+0.065=0.135
+  // 出口贴近正后（π）→ 切向近竖直，不斜前抛
+  guideA0: 3.70,                // 后下
+  guideA1: 3.20,                // 近正后略偏下 → 切向≈竖直微后
+  guideChW: 0.40,               // 通道宽（左右壁间距）
+  guideWallH: 0.060,
+
+  // 滚轮上方护板
+  shroudR: 0.105,
+  shroudSpan: Math.PI * 0.42,
+  shroudStart: 0.40,
+
+  // 顶部挡板：对准弧口上方（出口 x≈0.10），前移抬高
+  deflectorX0: 0.150,
+  deflectorY0: 0.400,
+  deflectorX1: 0.085,
+  deflectorY1: 0.520,
+  deflectorT: 0.012,
+
+  // 车体开口
+  topSlotX0: 0.05, topSlotX1: 0.19, topSlotW: 0.30,
+  botSlotX0: 0.10, botSlotX1: 0.28, botSlotW: 0.34,
+
+  // 横梁
+  beamY: 0.27,
+  beamX: 0.21,
+
+  // 可拆卸球筐
+  basketX0: -0.30, basketL: 0.36, basketW: 0.42,
+  basketH: 0.16,
+  basketZ0: 0.17,
+  get basketTop() { return this.basketZ0 + this.basketH; },
+  get basketCx() { return this.basketX0 + this.basketL / 2; },
+  get basketFront() { return this.basketX0 + this.basketL; }, // 0.06
+
+  floorZ: 0.17,
+  doorH: 0.20,
+
+  // 四轮等大：前轮=筐前下沿，后轮=筐后
+  wr: 0.050, ww: 0.038, wy: 0.185,
+  wxFront: 0.040,              // 筐前下沿
+  wxRear: -0.280,              // 筐后
+  mh: 0.045,
+};
+
+const BR = 0.0335; // 球半径
+
+const robot = new THREE.Group();
+scene.add(robot);
+
+const parts = {};
+const meta = [];
+const G = {
+  body: document.getElementById('g-body'),
+  basket: document.getElementById('g-basket'),
+  collect: document.getElementById('g-collect'),
+  drive: document.getElementById('g-drive'),
+};
+
+function box(w, h, d, mat, x, y, z, rx, ry, rz) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x||0, y||0, z||0);
+  m.rotation.set(rx||0, ry||0, rz||0);
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+function cyl(r, h, mat, x, y, z, rx, ry, rz, seg) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg||48), mat);
+  m.position.set(x||0, y||0, z||0);
+  m.rotation.set(rx||0, ry||0, rz||0);
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+function ballMesh(r, mat, x, y, z) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 12), mat);
+  m.position.set(x, y, z);
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+function reg(key, g, o) {
+  parts[key] = g;
+  g.userData.key = key;
+  g.userData.base = g.position.clone();
+  robot.add(g);
+  meta.push({ key, ...o });
+}
+
+/* ══════════════════════════════════════
+   1. 车体：矮平台
+   硬约束：球道必须贯通
+     - 顶板在滚轮后侧留【上升通道】开口，不能封死
+     - 底板在滚轮下方留【进料】开口，不能有横梁挡球
+   ══════════════════════════════════════ */
+{
+  const g = new THREE.Group();
+  const t = 0.013;
+  const bz = D.bodyZ + D.bodyH / 2;
+
+  // ── 顶板 ──
+  // 后段：筐坐的整块（x: 后端 → 筐前壁）
+  const topRearL = D.basketFront - D.bodyX0; // 0.36
+  g.add(box(topRearL, t, D.bodyW, MAT.shell,
+    D.bodyX0 + topRearL / 2, D.bodyTop - t/2, 0));
+  // 前段：两侧导轨，中间【上升通道】开口
+  const topFrontL = D.bodyFront - D.basketFront; // 0.20
+  const topSideW = (D.bodyW - D.topSlotW) / 2;   // 0.08
+  for (const s of [1, -1]) {
+    g.add(box(topFrontL, t, topSideW, MAT.shell,
+      D.basketFront + topFrontL / 2, D.bodyTop - t/2,
+      s * (D.topSlotW / 2 + topSideW / 2)));
+  }
+  // 顶板后段整板已到筐前壁；前段两侧导轨即构成通道边界，不再加短唇
+
+  // ── 底板 ──
+  // 后段：包住电池/电控（x: 后端 → 进料口后沿）
+  const botRearL = D.botSlotX0 - D.bodyX0; // 0.40
+  g.add(box(botRearL, t, D.bodyW, MAT.shell,
+    D.bodyX0 + botRearL / 2, D.bodyZ + t/2, 0));
+  // 前段：两侧导轨，中间【进料】开口（滚轮下方必须空）
+  const botFrontL = D.bodyFront - D.botSlotX0;
+  const botSideW = (D.bodyW - D.botSlotW) / 2; // 0.06
+  for (const s of [1, -1]) {
+    g.add(box(botFrontL, t, botSideW, MAT.shell,
+      D.botSlotX0 + botFrontL / 2, D.bodyZ + t/2,
+      s * (D.botSlotW / 2 + botSideW / 2)));
+  }
+
+  // ── 侧壁：只包住【后段功能舱】（电池/电控/筐下）
+  // 滚轮进料区不做整段侧裙——从前看会像两根腿，且挡进料视线
+  // 轴承/电机改用局部支架（见 roller / rollDrive）
+  const skirtRear = 0.10 - D.bodyX0; // 到 x=0.10，避开滚轮区
+  for (const s of [1, -1]) {
+    g.add(box(skirtRear, D.bodyH, t, MAT.shell,
+      D.bodyX0 + skirtRear / 2, bz, s * (D.bodyW/2 - t/2)));
+  }
+  // 后壁
+  g.add(box(t, D.bodyH, D.bodyW, MAT.shell, D.bodyX0 + t/2, bz, 0));
+
+  // 前脸：只做口上方盖板 + 口侧短挂板
+  // 硬约束：口两侧不得做成通到地面的竖板（会像两条前腿）
+  // 进料口从地到口顶保持全开，球直接滚入
+  const mouthTop = D.mouthZ + D.mouthH / 2; // 0.12
+  const upH = D.bodyTop - mouthTop - 0.004;
+  if (upH > 0.01) {
+    g.add(box(t, upH, D.bodyW, MAT.shell,
+      D.bodyFront - t/2, mouthTop + upH/2 + 0.004, 0));
+  }
+  // 口侧挂板：只从平台底(0.06)到口顶(0.12)，悬空，不触地
+  const sideW2 = (D.bodyW - D.mouthW) / 2;
+  const cheekH = mouthTop - D.bodyZ; // 0.06
+  for (const s of [1, -1]) {
+    g.add(box(t, cheekH, sideW2, MAT.shell,
+      D.bodyFront - t/2, D.bodyZ + cheekH/2, s * (D.mouthW/2 + sideW2/2)));
+  }
+  // 不做落地竖板、不做口下横梁——前部无腿，进料全开
+
+  // 防撞条 / 灯 —— 只贴后段侧壁，不伸到滚轮前
+  for (const s of [1, -1]) {
+    g.add(box(skirtRear * 0.85, 0.025, 0.018, MAT.rubber,
+      D.bodyX0 + skirtRear * 0.5, D.bodyZ + 0.022, s * (D.bodyW/2 + 0.006)));
+  }
+  g.add(box(0.06, 0.008, 0.018, MAT.led,
+    D.bodyFront - 0.02, D.bodyTop - 0.012, 0));
+
+  // 筐定位框
+  g.add(box(D.basketL + 0.01, 0.008, 0.012, MAT.frame,
+    D.basketCx, D.bodyTop + 0.004, D.basketW/2));
+  g.add(box(D.basketL + 0.01, 0.008, 0.012, MAT.frame,
+    D.basketCx, D.bodyTop + 0.004, -D.basketW/2));
+  g.add(box(0.012, 0.008, D.basketW + 0.01, MAT.frame,
+    D.basketX0, D.bodyTop + 0.004, 0));
+
+  reg('body', g, {
+    name: '矮平台车体', color: '#d2d4d8', dims: '侧壁仅后段',
+    group: 'body',
+    desc: '侧壁只包住后段功能舱；滚轮进料区无整段侧裙（从前看不像两根腿）。顶/底板留球道开口。'
+  });
+}
+
+/* ══════════════════════════════════════
+   2. 可拆卸球筐（独立，可整体取下）
+   ══════════════════════════════════════ */
+const basketGroup = new THREE.Group();
+{
+  const g = basketGroup;
+  const t = 0.012;
+  const bz = D.basketZ0;
+  const cx = D.basketCx;
+  const H = D.basketH;           // 四边同高
+
+  // 筐底
+  g.add(box(D.basketL, t, D.basketW, MAT.box, cx, bz + t/2, 0));
+  // 后壁
+  g.add(box(t, H, D.basketW, MAT.box, D.basketX0 + t/2, bz + H/2, 0));
+  // 左右侧壁
+  for (const s of [1, -1]) {
+    g.add(box(D.basketL, H, t, MAT.box, cx, bz + H/2, s * (D.basketW/2 - t/2)));
+    g.add(box(0.10, 0.03, 0.016, MAT.frame,
+      cx, bz + H * 0.55, s * (D.basketW/2 + 0.002)));
+  }
+  // 前壁（同高）
+  g.add(box(t, H, D.basketW, MAT.box,
+    D.basketX0 + D.basketL - t/2, bz + H/2, 0));
+  // 顶沿
+  g.add(box(D.basketL, 0.012, 0.014, MAT.frame, cx, bz + H, D.basketW/2 - 0.01));
+  g.add(box(D.basketL, 0.012, 0.014, MAT.frame, cx, bz + H, -(D.basketW/2 - 0.01)));
+  g.add(box(0.014, 0.012, D.basketW, MAT.frame, D.basketX0, bz + H, 0));
+  g.add(box(0.014, 0.012, D.basketW, MAT.frame, D.basketFront, bz + H, 0));
+  // 提手
+  g.add(box(0.03, 0.02, 0.14, MAT.rubber, D.basketX0 - 0.02, bz + H + 0.02, 0));
+
+  // 筐内示意球
+  const br = 0.0335;
+  const fy = bz + t + br;
+  for (let ix = 0; ix < 4; ix++)
+    for (let iz = 0; iz < 4; iz++)
+      g.add(ballMesh(br, MAT.ball,
+        D.basketX0 + 0.08 + ix * 0.075, fy, -0.11 + iz * 0.075));
+  for (let ix = 0; ix < 3; ix++)
+    for (let iz = 0; iz < 3; iz++)
+      g.add(ballMesh(br, MAT.ball,
+        D.basketX0 + 0.12 + ix * 0.075, fy + 0.055, -0.07 + iz * 0.075));
+
+  reg('basket', g, {
+    name: '可拆卸球筐', color: '#e85d04', dims: '36×42×16 · 四边同高',
+    group: 'basket',
+    desc: '橙色独立筐，四边同高16cm，坐在平台上。捡满整筐取走换新。'
+  });
+}
+
+/* ══════════════════════════════════════
+   1.5 frontUnit：滚轮+弧道+护板，X 滑条联动
+   ══════════════════════════════════════ */
+const BASE_ROLL_X = 0.24;
+const frontUnit = new THREE.Group();
+robot.add(frontUnit);
+
+/* ══════════════════════════════════════
+   2. 滚轮：挂 frontUnit，本地 x=0（世界 x=D.rollX）
+   ══════════════════════════════════════ */
+const rollerGroup = new THREE.Group();
+const rollerPivot = new THREE.Group();
+{
+  const g = rollerGroup;
+  rollerPivot.position.set(0, D.rollZ, 0); // 本地
+  g.add(rollerPivot);
+
+  rollerPivot.add(cyl(D.rollD / 2, D.rollL, MAT.roll,
+    0, 0, 0, Math.PI / 2, 0, 0, 64));
+  rollerPivot.add(cyl(0.016, D.rollL + 0.05, MAT.metal,
+    0, 0, 0, Math.PI / 2, 0, 0));
+
+  for (let i = 0; i < D.finN; i++) {
+    const ang = i * (2 * Math.PI / D.finN);
+    const r = D.rollD / 2 + D.finH / 2;
+    rollerPivot.add(box(0.010, D.finH, D.rollL - 0.04, MAT.fin,
+      r * Math.cos(ang), r * Math.sin(ang), 0, 0, 0, -ang + Math.PI / 2));
+  }
+
+  for (const s of [1, -1]) {
+    g.add(cyl(D.rollD / 2 + 0.002, 0.014, MAT.fin,
+      0, D.rollZ, s * (D.rollL / 2 + 0.006), Math.PI / 2, 0, 0, 48));
+  }
+  g.add(cyl(0.020, 0.030, MAT.metal, 0, D.rollZ, D.rollL / 2 + 0.028, Math.PI / 2, 0, 0));
+
+  const bearingZ = D.bodyW / 2 - 0.032;
+  for (const s of [1, -1]) {
+    g.add(cyl(0.022, 0.020, MAT.metal, 0, D.rollZ, s * bearingZ, Math.PI / 2, 0, 0, 32));
+    g.add(box(0.040, 0.040, 0.014, MAT.frame, 0, D.rollZ, s * (bearingZ + 0.014)));
+    const upH = D.bodyTop - D.rollZ - 0.02;
+    g.add(box(0.016, upH, 0.016, MAT.frame, 0, D.rollZ + 0.02 + upH / 2, s * (bearingZ + 0.010)));
+    const dnH = D.rollZ - 0.02 - D.bodyZ;
+    g.add(box(0.016, dnH, 0.016, MAT.frame, 0, D.rollZ - 0.02 - dnH / 2, s * (bearingZ + 0.010)));
+    g.add(box(0.030, 0.014, 0.020, MAT.frame, 0, D.bodyTop - 0.01, s * (D.bodyW / 2 - 0.020)));
+    g.add(box(0.030, 0.014, 0.020, MAT.frame, 0, D.bodyZ + 0.02, s * (D.bodyW / 2 - 0.020)));
+  }
+
+  g.userData.spinPivot = rollerPivot;
+  reg('roller', g, {
+    name: '滚轮', color: '#f07818', dims: 'Ø14 · 滑条可调X',
+    group: 'collect',
+    desc: '与弧道同轴；轮面到弧面间隙6.5cm。X 位置侧栏滑条微调。'
+  });
+  robot.remove(g);
+  frontUnit.add(g);
+}
+
+/* ══════════════════════════════════════
+   2c. 滚轮驱动电机 + 同步带传动
+   电机收在车体侧裙【内侧】，不外露，避免运行中碰撞
+   ══════════════════════════════════════ */
+{
+  const g = new THREE.Group();
+  const motorY = D.rollZ;
+  // 内侧：z 从 0.265 收到 0.155（侧裙内壁约 0.217，电机半长 0.035 → 外缘 0.19）
+  const motorZ = 0.155;
+  const motorX = D.rollX - 0.02;
+
+  // 电机本体（圆筒 + 端盖 + 出轴）
+  g.add(cyl(0.028, 0.070, MAT.dark, motorX, motorY, motorZ, Math.PI / 2, 0, 0, 40));
+  g.add(cyl(0.030, 0.008, MAT.metal, motorX, motorY, motorZ + 0.038, Math.PI / 2, 0, 0, 32));
+  g.add(cyl(0.008, 0.022, MAT.metal, motorX, motorY, motorZ + 0.052, Math.PI / 2, 0, 0, 16));
+  // 电机安装耳 → 连到侧裙内壁
+  for (const dy of [0.022, -0.022]) {
+    g.add(box(0.014, 0.010, 0.030, MAT.frame, motorX, motorY + dy, motorZ - 0.020));
+  }
+  // 支架：连到顶/底板导轨（无整段侧裙）
+  g.add(box(0.048, 0.012, 0.040, MAT.frame, motorX, motorY - 0.036, motorZ - 0.010));
+  g.add(box(0.014, 0.050, 0.016, MAT.frame,
+    motorX - 0.010, (D.bodyTop + D.bodyZ) / 2, motorZ - 0.008));
+  g.add(box(0.030, 0.014, 0.024, MAT.frame,
+    motorX - 0.010, D.bodyTop - 0.01, motorZ - 0.008));
+  g.add(box(0.030, 0.014, 0.024, MAT.frame,
+    motorX - 0.010, D.bodyZ + 0.02, motorZ - 0.008));
+
+  // 同步带轮（滚轮侧 / 电机侧）—— 同在内侧
+  const pulleyR1 = 0.020;
+  const pulleyR2 = 0.014;
+  const beltZ = motorZ - 0.012;
+  g.add(cyl(pulleyR1, 0.012, MAT.fin, D.rollX, D.rollZ, beltZ, Math.PI / 2, 0, 0, 32));
+  g.add(cyl(pulleyR2, 0.012, MAT.fin, motorX, motorY, beltZ, Math.PI / 2, 0, 0, 32));
+
+  // 同步带
+  const dx = motorX - D.rollX;
+  const dy = motorY - D.rollZ;
+  const beltLen = Math.hypot(dx, dy);
+  const beltAng = Math.atan2(dy, dx);
+  g.add(box(beltLen, 0.006, 0.004, MAT.rubber,
+    (D.rollX + motorX) / 2, (D.rollZ + motorY) / 2 + (pulleyR1 + pulleyR2) / 2,
+    beltZ, 0, 0, beltAng));
+  g.add(box(beltLen, 0.006, 0.004, MAT.rubber,
+    (D.rollX + motorX) / 2, (D.rollZ + motorY) / 2 - (pulleyR1 + pulleyR2) / 2,
+    beltZ, 0, 0, beltAng));
+
+  // 驱动线：沿车体内侧走向电控仓
+  const wirePts = [
+    new THREE.Vector3(motorX, motorY - 0.03, motorZ - 0.02),
+    new THREE.Vector3(motorX - 0.08, motorY - 0.05, 0.14),
+    new THREE.Vector3(0.02, D.bodyZ + 0.05, 0.12),
+    new THREE.Vector3(-0.06, D.bodyZ + 0.05, 0.12),
+  ];
+  const wireGeo = new THREE.TubeGeometry(
+    new THREE.CatmullRomCurve3(wirePts), 20, 0.0035, 6, false
+  );
+  g.add(new THREE.Mesh(wireGeo, MAT.hole));
+
+  reg('rollDrive', g, {
+    name: '滚轮电机+同步带', color: '#1a1c20', dims: '内侧 · 带传动',
+    group: 'collect',
+    desc: '减速电机收在侧裙内侧，经同步带驱动滚轮轴。不外露，避免运行中撞障碍物。'
+  });
+}
+
+/* ══════════════════════════════════════
+   2b. 收集上装（挂车架）
+   ══════════════════════════════════════ */
+{
+  const g = new THREE.Group();
+  frontUnit.add(g);
+  const AX = 0, AY = D.rollZ; // frontUnit 本地：滚轮在 x=0
+  const chW = D.guideChW;
+  const wallH = D.guideWallH;
+  const a0 = D.guideA0, a1 = D.guideA1;
+  const surfAt = (a) => ({
+    x: AX + D.guideR * Math.cos(a),
+    y: AY + D.guideR * Math.sin(a),
+  });
+
+  // ── 弧道底面（橙）：同轴后侧，凹口朝轮 ──
+  const segs = 14;
+  for (let i = 0; i < segs; i++) {
+    const a = a0 + (a1 - a0) * (i + 0.5) / segs;
+    const p = surfAt(a);
+    const segLen = D.guideR * Math.abs(a1 - a0) / segs * 1.12;
+    const tan = a + Math.PI / 2;
+    g.add(box(segLen, 0.014, chW, MAT.fin, p.x, p.y, 0, 0, 0, tan));
+    // 侧壁：竖直立在弧面 Z 边
+    for (const s of [1, -1]) {
+      g.add(box(segLen, wallH, 0.012, MAT.def,
+        p.x, p.y + wallH / 2, s * (chW / 2), 0, 0, tan));
+    }
+  }
+  // 入口【不封】；出口短唇
+  {
+    const pB = surfAt(a1);
+    g.add(box(0.010, 0.016, chW, MAT.frame,
+      pB.x - 0.01, pB.y + 0.01, 0));
+  }
+
+  reg('guardLocal', g, {
+    name: '同轴弧道', color: '#e85d04', dims: '间隙6.5cm · 入口开',
+    group: 'collect',
+    desc: '与滚轮同轴；轮面→弧面间隙6.5cm（略小于球径，便于咬球）。入口不封；出口切向竖直。'
+  });
+  robot.remove(g);
+  frontUnit.add(g);
+  parts.guard = g;
+}
+
+// ── 车架上装：滚轮顶护板 + 横梁 + 60°挡板（全部挂 robot，不随滚轮滑条）──
+{
+  const g = new THREE.Group();
+  const AX = BASE_ROLL_X, AY = D.rollZ; // 世界系，对齐默认滚轮位
+  const beamH = D.beamY;
+  const beamHalf = (D.bodyW - 0.06) / 2;
+
+  // 顶护板：几何绕轮轴，但由车架立柱撑住
+  const shroudGeo = new THREE.TorusGeometry(D.shroudR, 0.010, 8, 20, D.shroudSpan);
+  for (const s of [1, -1]) {
+    const holder = new THREE.Group();
+    holder.position.set(AX, AY, s * (D.rollL / 2 + 0.006));
+    holder.rotation.z = D.shroudStart;
+    holder.add(new THREE.Mesh(shroudGeo, MAT.frame));
+    g.add(holder);
+  }
+  for (let i = 0; i < 3; i++) {
+    const a = D.shroudStart + D.shroudSpan * (i + 0.5) / 3;
+    g.add(box(0.012, 0.012, D.rollL, MAT.frame,
+      AX + D.shroudR * Math.cos(a), AY + D.shroudR * Math.sin(a), 0));
+  }
+  // 护板 → 平台顶侧导轨立柱
+  for (const s of [1, -1]) {
+    for (const a of [D.shroudStart + 0.2, D.shroudStart + D.shroudSpan - 0.1]) {
+      const sx = AX + D.shroudR * Math.cos(a);
+      const sy = AY + D.shroudR * Math.sin(a);
+      const railZ = s * (D.bodyW / 2 - 0.030);
+      const postH = Math.max(0.03, sy - D.bodyTop);
+      g.add(box(0.016, postH, 0.016, MAT.frame,
+        sx, D.bodyTop + postH / 2, railZ));
+      g.add(box(0.020, 0.012, 0.018, MAT.frame, sx, D.bodyTop + 0.006, railZ));
+      g.add(box(0.045, 0.012, 0.014, MAT.frame,
+        sx, sy - 0.01, (railZ + s * (D.rollL / 2 + 0.01)) / 2));
+    }
+  }
+
+  // 横梁（摄像头）
+  g.add(box(0.028, 0.022, D.bodyW - 0.06, MAT.frame, D.beamX, beamH, 0));
+  for (const s of [1, -1]) {
+    const railZ = s * (D.bodyW / 2 - 0.05);
+    g.add(box(0.022, beamH - D.bodyTop, 0.022, MAT.frame,
+      D.beamX, (D.bodyTop + beamH) / 2, railZ));
+    g.add(box(0.040, 0.014, 0.032, MAT.frame, D.beamX, D.bodyTop + 0.006, railZ));
+  }
+
+  // 60°挡板：吊在横梁上（车架，不随滚轮）
+  const dx = D.deflectorX1 - D.deflectorX0;
+  const dy = D.deflectorY1 - D.deflectorY0;
+  const len = Math.hypot(dx, dy);
+  const ang = Math.atan2(dy, dx);
+  const midX = (D.deflectorX0 + D.deflectorX1) / 2;
+  const midY = (D.deflectorY0 + D.deflectorY1) / 2;
+  const defW = D.rollL * 0.80;
+  g.add(box(len, D.deflectorT, defW, MAT.def, midX, midY, 0, 0, 0, ang));
+  for (const s of [1, -1]) {
+    g.add(box(len, 0.036, 0.008, MAT.frame, midX, midY - 0.010, s * (defW / 2 + 0.006), 0, 0, ang));
+    const bz = s * (beamHalf - 0.03);
+    const dz = s * (defW / 2);
+    const armLen = Math.hypot(D.beamX - midX, beamH - midY);
+    const armAng = Math.atan2(midY - beamH, midX - D.beamX);
+    g.add(box(armLen, 0.016, 0.018, MAT.frame,
+      (D.beamX + midX) / 2, (beamH + midY) / 2, (bz + dz) / 2, 0, 0, armAng));
+    g.add(box(0.016, 0.028, 0.016, MAT.frame, midX, midY + 0.012, dz));
+  }
+  // 顶护板与挡板之间的结构连接（同属车架上装）
+  {
+    const aS = D.shroudStart + D.shroudSpan * 0.85;
+    const sx = AX + D.shroudR * Math.cos(aS);
+    const sy = AY + D.shroudR * Math.sin(aS);
+    const armLen = Math.hypot(sx - midX, sy - midY);
+    const armAng = Math.atan2(midY - sy, midX - sx);
+    for (const s of [1, -1]) {
+      g.add(box(armLen, 0.014, 0.014, MAT.frame,
+        (sx + midX) / 2, (sy + midY) / 2, s * (defW / 2 - 0.02), 0, 0, armAng));
+    }
+  }
+
+  reg('chassisTop', g, {
+    name: '车架上装（护板+挡板）', color: '#2a2e34', dims: '全部挂车架',
+    group: 'collect',
+    desc: '滚轮顶护板与60°挡板同属车架：立柱生根平台顶，挡板吊在横梁上；不随滚轮滑条移动。'
+  });
+}
+
+// 滑条：滚轮+弧道整体前后微调
+// 滚轮本地 x=0 ⇒ frontUnit.position.x 必须直接等于 D.rollX
+// （若写成 x−BASE，世界会变成 0，滚轮会钻到筐下）
+{
+  const slider = document.getElementById('roll-slider');
+  const valEl = document.getElementById('roll-val');
+  function applyRollX(x) {
+    D.rollX = x;
+    frontUnit.position.x = x;
+    if (valEl) valEl.textContent = x.toFixed(3);
+  }
+  applyRollX(D.rollX);
+  if (slider) {
+    slider.value = String(D.rollX);
+    slider.addEventListener('input', () => applyRollX(parseFloat(slider.value)));
+  }
+}
+
+// 摄像头：装在滚轮正上方横梁（车体固定，高度适中）
+{
+  const g = new THREE.Group();
+  g.add(box(0.024, D.mh, 0.024, MAT.frame, D.beamX, D.beamY + 0.014 + D.mh/2, 0));
+  g.add(box(0.036, 0.028, 0.036, MAT.dark, D.beamX + 0.010, D.beamY + 0.014 + D.mh + 0.012, 0));
+  g.add(cyl(0.010, 0.012, MAT.glass,
+    D.beamX + 0.028, D.beamY + 0.014 + D.mh + 0.012, 0, 0, 0, Math.PI/2));
+  reg('camera', g, {
+    name: '摄像头（滚轮上方）', color: '#0c2840', dims: '横梁 · 中高度',
+    group: 'body',
+    desc: '固定在滚轮正上方横梁，高度约33cm，可越过筐沿看前方地面；不随轮转、不随筐拆。'
+  });
+}
+
+/* ══════════════════════════════════════
+   3. 行走轮：四轮等大
+   前轮：筐前下沿 x=0.04，转向舵机
+   后轮：筐后 x=-0.28，差速驱动
+   ══════════════════════════════════════ */
+// 后轮×2（驱动，与前轮同尺寸）
+for (const [key, wx, side, label] of [
+  ['wheel_rl', D.wxRear, 1, '左后驱动轮'],
+  ['wheel_rr', D.wxRear, -1, '右后驱动轮'],
+]) {
+  const g = new THREE.Group();
+  g.add(cyl(D.wr, D.ww, MAT.rubber, wx, D.wr, side * D.wy, Math.PI/2, 0, 0, 36));
+  g.add(cyl(D.wr * 0.38, D.ww + 0.004, MAT.metal, wx, D.wr, side * D.wy, Math.PI/2, 0, 0));
+  // 减速电机（轮内侧）
+  g.add(cyl(0.022, 0.048, MAT.dark,
+    wx, D.wr, side * (D.wy - D.ww/2 - 0.028), Math.PI/2, 0, 0, 28));
+  g.add(cyl(0.026, 0.010, MAT.metal,
+    wx, D.wr, side * (D.wy - D.ww/2 - 0.056), Math.PI/2, 0, 0, 20));
+  // 支架 → 平台底
+  g.add(box(0.048, 0.014, 0.024, MAT.frame,
+    wx, D.wr - 0.012, side * (D.wy - 0.030)));
+  g.add(box(0.014, 0.030, 0.014, MAT.frame,
+    wx, D.wr + 0.02, side * (D.wy - 0.030)));
+  reg(key, g, {
+    name: label, color: '#0a0a0a', dims: 'Ø10 · 与前轮同大',
+    group: 'drive',
+    desc: '后轮差速驱动，位于筐后 x=-0.28，与前轮同尺寸。'
+  });
+}
+// 前轮×2（转向）：筐前下沿，舵机在转向节上
+{
+  const g = new THREE.Group();
+  const fwX = D.wxFront; // 0.04
+  for (const s of [1, -1]) {
+    g.add(cyl(D.wr, D.ww, MAT.rubber, fwX, D.wr, s * D.wy, Math.PI/2, 0, 0, 36));
+    g.add(cyl(D.wr * 0.40, D.ww + 0.004, MAT.metal, fwX, D.wr, s * D.wy, Math.PI/2, 0, 0));
+    // 转向节立轴
+    g.add(cyl(0.009, 0.050, MAT.metal, fwX, D.wr + 0.022, s * D.wy, 0, 0, 0, 14));
+    g.add(box(0.036, 0.012, 0.020, MAT.frame, fwX, D.wr + 0.042, s * D.wy));
+    // 转向舵机（筐前下沿上方，有安装空间）
+    const sy = D.wr + 0.070;
+    g.add(box(0.038, 0.030, 0.034, MAT.dark, fwX, sy, s * D.wy));
+    g.add(box(0.018, 0.010, 0.018, MAT.fin, fwX, sy + 0.018, s * D.wy));
+    // 上支臂 → 平台前部底
+    g.add(box(0.014, 0.036, 0.014, MAT.frame,
+      fwX, (sy + D.bodyZ) / 2, s * D.wy));
+    g.add(box(0.028, 0.012, 0.024, MAT.frame,
+      fwX, D.bodyZ + 0.016, s * D.wy));
+  }
+  reg('steer', g, {
+    name: '前轮×2+舵机', color: '#0a0a0a', dims: 'Ø10 · 筐前下沿',
+    group: 'drive',
+    desc: '前轮位于筐前下沿 x=0.04，与后轮同尺寸。转向舵机装在转向节上方，有独立安装空间。'
+  });
+}
+{
+  const g = new THREE.Group();
+  // 电池包：收进平台下方内侧（原在外侧易撞）
+  const bx = -0.10, by = D.bodyZ + 0.025, bz = 0.0; // 居中，|z|≤0.055
+  g.add(box(0.15, 0.045, 0.11, MAT.frame, bx, by, bz));
+  g.add(box(0.012, 0.030, 0.08, MAT.dark, bx + 0.072, by + 0.003, bz));
+  g.add(box(0.05, 0.008, 0.02, MAT.rubber, bx, by + 0.023, bz));
+  g.add(cyl(0.004, 0.004, MAT.led, bx + 0.055, by + 0.015, bz + 0.048, Math.PI/2, 0, 0, 12));
+  // 出线向内走向电控仓
+  const pts = [
+    new THREE.Vector3(bx + 0.06, by, bz + 0.04),
+    new THREE.Vector3(bx + 0.10, by + 0.01, 0.08),
+    new THREE.Vector3(-0.02, D.bodyZ + 0.05, 0.12),
+  ];
+  g.add(new THREE.Mesh(
+    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.004, 6, false),
+    MAT.hole
+  ));
+  reg('battery', g, {
+    name: '电池包', color: '#2a2e34', dims: '3S · 车体内',
+    group: 'drive',
+    desc: '锂电池包放在平台下方内侧居中，两侧留轮边空间，运行中不会被围网/墙蹭到。'
+  });
+}
+
+/* ══════════════════════════════════════
+   3b. 电控仓（ESP32 + 驱动板）—— 收在车体内侧
+   ══════════════════════════════════════ */
+{
+  const g = new THREE.Group();
+  // 内侧：原 z=+0.248 在体外，现收到 z=0.12，y 在平台下
+  const ex = 0.02, ey = D.bodyZ + 0.045, ez = 0.12;
+
+  g.add(box(0.10, 0.055, 0.040, MAT.dark, ex, ey, ez));
+  for (let i = 0; i < 5; i++) {
+    g.add(box(0.008, 0.003, 0.030, MAT.metal, ex - 0.032 + i * 0.016, ey + 0.028, ez));
+  }
+  g.add(cyl(0.0035, 0.004, MAT.led, ex + 0.040, ey + 0.018, ez + 0.018, Math.PI/2, 0, 0, 12));
+  // 调试口朝内上，不朝外
+  g.add(box(0.012, 0.006, 0.010, MAT.metal, ex - 0.050, ey + 0.005, ez));
+  // 线缆：电机 / 电池 / 摄像头，全在体内走线
+  const runs = [
+    [ [ex + 0.03, ey, ez], [0.12, D.bodyZ + 0.06, 0.14], [D.beamX - 0.02, D.bodyTop + 0.01, 0.16], [D.beamX, D.beamY + 0.005, 0] ],
+    [ [ex - 0.03, ey, ez - 0.01], [-0.04, D.bodyZ + 0.04, 0.06], [-0.10, D.bodyZ + 0.04, 0.04] ],
+  ];
+  for (const r of runs) {
+    const curve = new THREE.CatmullRomCurve3(r.map(p => new THREE.Vector3(...p)));
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.0028, 6, false), MAT.hole));
+  }
+  for (const dx of [-0.035, 0.035]) {
+    g.add(cyl(0.005, 0.012, MAT.metal, ex + dx, D.bodyZ + 0.006, ez, 0, 0, 0, 12));
+  }
+
+  reg('ecu', g, {
+    name: '电控仓', color: '#1a1c20', dims: 'ESP32 · 车体内',
+    group: 'drive',
+    desc: 'ESP32 + 驱动板放在平台下方内侧。ToF 急停、速度环、串口都在这里；外侧无凸出件。'
+  });
+}
+
+/* ══════════════════════════════════════
+   3c. 前向 ToF 防撞传感器
+   ══════════════════════════════════════ */
+{
+  const g = new THREE.Group();
+  // 正前 ToF
+  g.add(box(0.012, 0.018, 0.022, MAT.dark, D.bodyFront + 0.006, 0.085, 0));
+  g.add(cyl(0.005, 0.004, MAT.glass, D.bodyFront + 0.012, 0.085, 0, 0, 0, Math.PI/2, 12));
+  // 左前 / 右前斜向
+  for (const s of [1, -1]) {
+    g.add(box(0.012, 0.016, 0.018, MAT.dark,
+      D.bodyFront - 0.01, 0.080, s * (D.mouthW/2 + 0.02), 0, s * 0.4, 0));
+    g.add(cyl(0.004, 0.003, MAT.glass,
+      D.bodyFront - 0.004, 0.080, s * (D.mouthW/2 + 0.026), 0, s * Math.PI/2, 0, 10));
+  }
+  reg('tof', g, {
+    name: 'ToF 防撞×3', color: '#0c2840', dims: '前+左前+右前',
+    group: 'body',
+    desc: 'VL53 系列测距，ESP32 本地 D_hard 急停。不依赖视觉，硬性不撞墙。'
+  });
+}
+
+/* ══════════════════════════════════════
+   5. 进球动画
+   轮→弧 面隙 = guideGap ≥6cm
+   出口切向≈竖直上冲 → 撞前移挡板 → 入筐
+   ══════════════════════════════════════ */
+const animBalls = [];
+const ANIM = { playing: true };
+
+const ROLL_MIN = D.rollD / 2 + 0.012; // 允许球“咬”进轮面一点（间隙略小于球径）
+// 球心在轮↔弧中缝（略偏弧内侧），既不穿弧板也不陷进轮心
+const BRIDE = () => {
+  const rRoll = D.rollD / 2;
+  const rCh = D.guideR;
+  return (rRoll + rCh) / 2 + 0.002; // 中缝略偏弧
+};
+
+function distToRoller(x, y) {
+  return Math.hypot(x - D.rollX, y - D.rollZ);
+}
+function clampOutsideRoller(x, y) {
+  const d = distToRoller(x, y);
+  if (d >= ROLL_MIN) return { x, y, d };
+  const k = ROLL_MIN / Math.max(1e-6, d);
+  return { x: D.rollX + (x - D.rollX) * k, y: D.rollZ + (y - D.rollZ) * k, d: ROLL_MIN };
+}
+function guidePoint(a) {
+  const R = BRIDE();
+  return clampOutsideRoller(
+    D.rollX + R * Math.cos(a),
+    D.rollZ + R * Math.sin(a)
+  );
+}
+// 出口切向（a 从大到小）：v ∝ (sin a, -cos a)
+function exitTangent(a) {
+  const s = Math.sin(a), c = -Math.cos(a);
+  const n = Math.hypot(s, c) || 1;
+  return { vx: s / n, vy: c / n };
+}
+function deflectorYAt(x) {
+  const t = (x - D.deflectorX0) / (D.deflectorX1 - D.deflectorX0);
+  if (t < 0 || t > 1) return null;
+  return D.deflectorY0 + (D.deflectorY1 - D.deflectorY0) * t;
+}
+
+const PHASE = {
+  APPROACH: 0, DRAG: 1, ARC: 2, FLING: 3, HIT: 4, DROP: 5, LAND: 6,
+};
+
+function spawnAnimBall() {
+  const mesh = ballMesh(BR, MAT.ballHot, 0, 0, 0);
+  scene.add(mesh);
+  const p0 = guidePoint(D.guideA0);
+  const b = {
+    mesh, phase: PHASE.APPROACH, t: 0,
+    x0: D.bodyFront + 0.24,
+    z0: (Math.random() - 0.5) * 0.04,
+    xNip: D.rollX + ROLL_MIN,
+    xUnder: Math.min(D.rollX - 0.015, p0.x + 0.02),
+    landX: D.basketX0 + 0.12 + Math.random() * 0.10,
+    landZ: (Math.random() - 0.5) * 0.14,
+    landY: D.basketZ0 + 0.012 + BR,
+  };
+  const c = clampOutsideRoller(b.xUnder, BR);
+  b.xUnder = c.x;
+  animBalls.push(b);
+  return b;
+}
+spawnAnimBall();
+const phaseEl = document.getElementById('phase');
+
+function updateAnim(dt) {
+  if (!ANIM.playing) return;
+  const spin = parts.roller?.userData?.spinPivot;
+  if (spin) spin.rotation.z -= dt * 6.2;
+
+  const vIn = 0.68, vDrag = 0.52, omegaArc = 2.6;
+
+  for (let i = animBalls.length - 1; i >= 0; i--) {
+    const b = animBalls[i];
+    const m = b.mesh;
+
+    if (b.phase === PHASE.APPROACH) {
+      b.t += dt * vIn;
+      const dist = b.x0 - b.xNip;
+      const p = Math.min(1, b.t / Math.max(0.01, dist));
+      m.position.x = b.x0 + (b.xNip - b.x0) * p;
+      m.position.y = BR;
+      m.position.z = b.z0 * (1 - p);
+      if (p >= 1) { b.phase = PHASE.DRAG; b.t = 0; }
+      phaseEl.textContent = '① 球贴地接近';
+
+    } else if (b.phase === PHASE.DRAG) {
+      b.t += dt * vDrag;
+      const dist = Math.max(0.01, b.xNip - b.xUnder);
+      const p = Math.min(1, b.t / dist);
+      const ease = p * p * (3 - 2 * p);
+      const chk = clampOutsideRoller(b.xNip + (b.xUnder - b.xNip) * ease, BR);
+      m.position.set(chk.x, Math.max(chk.y, BR * 0.9), 0);
+      if (p >= 1) { b.phase = PHASE.ARC; b.t = 0; }
+      phaseEl.textContent = '② 轮底拖到轮后';
+
+    } else if (b.phase === PHASE.ARC) {
+      b.t += dt * omegaArc;
+      const k = Math.min(1, b.t / 1.2);
+      const a = D.guideA0 + (D.guideA1 - D.guideA0) * k;
+      const s = guidePoint(a);
+      m.position.set(s.x, Math.max(s.y, BR), 0);
+      if (k >= 1) {
+        b.phase = PHASE.FLING;
+        b.t = 0;
+        b.fx = m.position.x;
+        b.fy = m.position.y;
+        // 近竖直上冲（略带后向分量，不斜前抛）
+        b.vx = -0.04;
+        b.vy = 1.95;
+      }
+      phaseEl.textContent = '③ 沿同轴弧上升（隙≥6cm）';
+
+    } else if (b.phase === PHASE.FLING) {
+      b.t += dt;
+      const g = 5.0, t = b.t;
+      let x = b.fx + b.vx * t;
+      let y = b.fy + b.vy * t - 0.5 * g * t * t;
+      const chk = clampOutsideRoller(x, y);
+      m.position.set(chk.x, chk.y, 0);
+      const dy = deflectorYAt(chk.x);
+      if (dy !== null && chk.y + BR >= dy - 0.004 && (b.vy - g * t) > 0) {
+        b.phase = PHASE.HIT; b.t = 0;
+        b.hx = chk.x; b.hy = dy - BR;
+        phaseEl.textContent = '④ 撞前移挡板';
+      } else if (chk.y < BR) {
+        scene.remove(m); animBalls.splice(i, 1);
+        if (ANIM.playing) spawnAnimBall();
+      } else {
+        phaseEl.textContent = '③′ 竖直上冲';
+      }
+
+    } else if (b.phase === PHASE.HIT) {
+      b.t += dt;
+      if (b.t < 0.07) {
+        const k = b.t / 0.07;
+        m.position.set(b.hx - 0.004 * k, b.hy, 0);
+      } else {
+        b.phase = PHASE.DROP; b.t = 0;
+        b.fx = m.position.x; b.fy = m.position.y;
+        b.vx = -1.0; b.vy = -0.04;
+      }
+      phaseEl.textContent = '④ 撞前移挡板';
+
+    } else if (b.phase === PHASE.DROP) {
+      b.t += dt;
+      const g = 5.4, t = b.t;
+      m.position.x = b.fx + b.vx * t;
+      m.position.y = b.fy + b.vy * t - 0.5 * g * t * t;
+      m.position.z = 0;
+      if (m.position.y <= b.landY && t > 0.05) {
+        const inX = m.position.x > D.basketX0 + BR * 0.5 &&
+                    m.position.x < D.basketFront - BR * 0.3;
+        if (inX) {
+          m.position.y = b.landY;
+          b.phase = PHASE.LAND; b.t = 0;
+          b.lx = m.position.x; b.lz = 0;
+        } else if (m.position.y < BR) {
+          scene.remove(m); animBalls.splice(i, 1);
+          if (ANIM.playing) spawnAnimBall();
+        }
+      }
+      phaseEl.textContent = '⑤ 挡板弹入筐';
+
+    } else if (b.phase === PHASE.LAND) {
+      b.t += dt;
+      const k = Math.min(1, b.t / 0.40);
+      const ease = 1 - Math.pow(1 - k, 3);
+      m.position.x = b.lx + (b.landX - b.lx) * ease;
+      m.position.z = b.lz + (b.landZ - b.lz) * ease;
+      m.position.y = b.landY;
+      m.material = MAT.ball;
+      if (k >= 1) {
+        scene.remove(m);
+        if (parts.basket) parts.basket.add(ballMesh(BR, MAT.ball, b.landX, b.landY, b.landZ));
+        animBalls.splice(i, 1);
+        if (ANIM.playing) spawnAnimBall();
+        phaseEl.textContent = '⑥ 已入筐';
+      }
+    }
+  }
+}
+/* ══════════════════════════════════════
+   UI
+   ══════════════════════════════════════ */
+const EX = {
+  body:     new THREE.Vector3(0, -0.04, 0),
+  roller:   new THREE.Vector3(0.14, 0.04, 0),
+  rollDrive:new THREE.Vector3(0.06, 0.04, 0.16),
+  guard:    new THREE.Vector3(0.06, 0.10, 0),
+  basket:   new THREE.Vector3(-0.05, 0.18, 0),
+  wheel_rl: new THREE.Vector3(0, 0, 0.12),
+  wheel_rr: new THREE.Vector3(0, 0, -0.12),
+  steer:    new THREE.Vector3(0.04, 0.02, 0),
+  camera:   new THREE.Vector3(0.02, 0.12, 0),
+  battery:  new THREE.Vector3(-0.02, -0.06, 0),
+  ecu:      new THREE.Vector3(0.02, -0.06, 0.10),
+  tof:      new THREE.Vector3(0.10, 0.02, 0),
+};
+
+let selected = null;
+let wire = false;
+
+meta.forEach(p => {
+  const b = document.createElement('button');
+  b.className = 'pb';
+  b.dataset.k = p.key;
+  b.innerHTML =
+    `<span class="sw" style="background:${p.color}"></span>` +
+    `<span>${p.name}</span><span class="dm">${p.dims}</span>`;
+  b.onclick = () => focus(p.key);
+  G[p.group].appendChild(b);
+});
+
+function focus(key) {
+  selected = key;
+  document.querySelectorAll('.pb').forEach(b =>
+    b.classList.toggle('on', b.dataset.k === key));
+  Object.keys(parts).forEach(k => {
+    parts[k].traverse(c => {
+      if (c.isMesh && c.material.emissive &&
+          !c.material.equals(MAT.led) && !c.material.equals(MAT.ballHot)) {
+        if (!c.userData._orig) c.userData._orig = c.material;
+        c.material = c.material.clone();
+        c.material.emissive.setHex(k === key ? 0x442200 : 0x000000);
+      }
+    });
+  });
+  const g = parts[key];
+  if (!g) return;
+  const bb = new THREE.Box3().setFromObject(g);
+  const ctr = bb.getCenter(new THREE.Vector3());
+  const sz = bb.getSize(new THREE.Vector3()).length();
+  const d = Math.max(0.5, sz * 2.1);
+  camera.position.copy(ctr.clone().add(
+    new THREE.Vector3(1, 0.7, 0.9).normalize().multiplyScalar(d)));
+  ctrl.target.copy(ctr);
+  ctrl.update();
+}
+
+document.getElementById('b-anim').onclick = e => {
+  ANIM.playing = !ANIM.playing;
+  e.target.classList.toggle('on', ANIM.playing);
+  e.target.textContent = ANIM.playing ? '暂停动画' : '播放动画';
+  if (ANIM.playing && animBalls.length === 0) spawnAnimBall();
+};
+// 取下 / 放上球筐
+let basketOff = false;
+document.getElementById('b-basket').onclick = e => {
+  basketOff = !basketOff;
+  e.target.classList.toggle('on', basketOff);
+  e.target.textContent = basketOff ? '放上球筐' : '取下球筐';
+  const g = parts.basket;
+  if (!g) return;
+  if (basketOff) {
+    g.userData.tgt = new THREE.Vector3(0, 0.35, -0.70); // 挪到车旁
+  } else {
+    g.userData.tgt = new THREE.Vector3(0, 0, 0); // 回到平台上
+  }
+};
+document.getElementById('b-wi').onclick = e => {
+  wire = !wire;
+  e.target.classList.toggle('on', wire);
+  Object.keys(MAT).forEach(k => { MAT[k].wireframe = wire; });
+};
+document.getElementById('b-gr').onclick = e => {
+  grid.visible = !grid.visible;
+  e.target.classList.toggle('on', grid.visible);
+};
+document.getElementById('b-reset').onclick = () => {
+  selected = null;
+  document.querySelectorAll('.pb').forEach(b => b.classList.remove('on'));
+  camera.position.copy(homePos);
+  ctrl.target.set(0, 0.16, 0);
+  ctrl.update();
+};
+
+/* 渲染 */
+let last = performance.now();
+(function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  updateAnim(dt);
+  ctrl.update();
+  renderer.render(scene, camera);
+})(last);
+
+window.addEventListener('resize', () => {
+  camera.aspect = wrap.clientWidth / wrap.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+});
+
+// 初始：侧前低视角，能同时看到口、滚轮、内腔
+camera.position.set(1.15, 0.55, 0.80);
+ctrl.target.set(0.05, 0.12, 0);
+ctrl.update();
+</script>
+</body>
+</html>

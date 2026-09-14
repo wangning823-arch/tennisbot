@@ -70,7 +70,7 @@
 <body>
 <aside>
   <h1>网球捡球机器人 · E1.0</h1>
-  <p class="sub">极客套件 · 室外硬地 · E1.1<br/>离地3.5cm 防压球 · 轮底6.8cm 可调<br/>2020铝骨架 + 可拆筐 + 前部滚轮吸入</p>
+  <p class="sub">极客套件 · 室外硬地 · E1.2<br/>离地3.5cm · 轮底6.8cm 可调<br/>后驱单电机通轴 · 前轮中置舵机转向</p>
 
   <div class="note">
     <b>进球高度链 · E1.1</b><br/>
@@ -111,13 +111,19 @@
     <span id="roll-val" style="font-size:11px;color:var(--muted);min-width:42px">0.24</span>
   </div>
   <div style="font-size:11px;color:var(--muted);margin-bottom:4px">轮底高度 Z（离地）</div>
-  <div style="display:flex;align-items:center;gap:8px">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
     <input id="rollz-slider" type="range" min="0.062" max="0.090" step="0.001"
       value="0.068" style="flex:1">
     <span id="rollz-val" style="font-size:11px;color:var(--muted);min-width:42px">68mm</span>
   </div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:4px">挡板角度（铰链）</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <input id="def-slider" type="range" min="-18" max="18" step="1"
+      value="0" style="flex:1">
+    <span id="def-val" style="font-size:11px;color:var(--muted);min-width:42px">0°</span>
+  </div>
   <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">
-    离地 3.5cm 挡球入底；轮底 &gt; 球径 Ø6.7 才能从轮下进入。现场用高度滑条微调咬球。
+    离地 3.5cm 挡球入底；轮底 &gt; 球径 Ø6.7 才能从轮下进入。挡板 2 杆铰链，可调反射角。
   </p>
 </aside>
 
@@ -294,8 +300,8 @@ const D = {
   floorZ: 0.17,
   doorH: 0.20,
 
-  // 四轮等大：前轮=筐前下沿，后轮=筐后
-  wr: 0.050, ww: 0.038, wy: 0.185,
+  // 四轮等大：轮距加宽，前轮外八有转向空间
+  wr: 0.050, ww: 0.038, wy: 0.215,
   wxFront: 0.040,              // 筐前下沿
   wxRear: -0.280,              // 筐后
   mh: 0.045,
@@ -380,18 +386,23 @@ function reg(key, g, o) {
   g.add(box(botRearL, t, D.bodyW, MAT.plate,
     D.bodyX0 + botRearL / 2, D.bodyZ + t/2, 0));
   // 前段：两侧导轨，中间【进料】开口（滚轮下方必须空）
+  // 侧轨收到轮内侧，给前轮转向留空间；轮处开拱形让位
   const botFrontL = D.bodyFront - D.botSlotX0;
-  const botSideW = (D.bodyW - D.botSlotW) / 2; // 0.06
+  const botSideW = 0.035; // 原 0.06，收到 |z|≤0.20 内侧
+  const botSlotHalf = D.bodyW / 2 - botSideW;
   for (const s of [1, -1]) {
     g.add(box(botFrontL, t, botSideW, MAT.plate,
       D.botSlotX0 + botFrontL / 2, D.bodyZ + t/2,
-      s * (D.botSlotW / 2 + botSideW / 2)));
+      s * (botSlotHalf - botSideW / 2)));
   }
-  // 后驱电机让位孔（离地 3.5cm，JGB37 会略探出板下）
+  // 前轮拱让位（转向扫掠区）
   for (const s of [1, -1]) {
-    g.add(box(0.052, t + 0.004, 0.052, MAT.hole,
-      D.wxRear, D.bodyZ + t/2, s * (D.wy - 0.040)));
+    g.add(box(0.10, t + 0.006, 0.09, MAT.hole,
+      D.wxFront, D.bodyZ + t / 2, s * (D.wy - 0.02)));
   }
+  // 后驱电机中置让位孔（单电机通轴）
+  g.add(box(0.055, t + 0.004, 0.055, MAT.hole,
+    D.wxRear, D.bodyZ + t / 2, 0));
   // 底部纵梁 2020
   for (const s of [1, -1]) {
     g.add(box(botRearL, 0.020, 0.020, MAT.extrusion,
@@ -570,6 +581,9 @@ function applyFrontUnitOffset() {
   frontUnit.position.y = rollAdj.bottom - D.rollBottom;
 }
 applyFrontUnitOffset();
+
+// 挡板铰链（chassisTop 内创建后写入）
+let deflectorRef = null;
 
 /* ══════════════════════════════════════
    2. 滚轮（工程化）：挂 frontUnit，本地 x=0
@@ -855,45 +869,71 @@ const rollerPivot = new THREE.Group();
     g.add(box(0.040, 0.014, 0.032, MAT.frame, D.beamX, D.bodyTop + 0.006, railZ));
   }
 
-  // 60°挡板：铝板 + 橡胶垫，吊在横梁上
+  // 60°挡板：2 杆铰链吊在横梁上，可调反射角
+  // 铰链原点 = 横梁 (beamX, beamH)，绕 Z 旋转
   const dx = D.deflectorX1 - D.deflectorX0;
   const dy = D.deflectorY1 - D.deflectorY0;
   const len = Math.hypot(dx, dy);
-  const ang = Math.atan2(dy, dx);
+  const boardAng = Math.atan2(dy, dx);
   const midX = (D.deflectorX0 + D.deflectorX1) / 2;
   const midY = (D.deflectorY0 + D.deflectorY1) / 2;
   const defW = D.rollL * 0.80;
-  g.add(box(len, D.deflectorT, defW, MAT.def, midX, midY, 0, 0, 0, ang));
-  // 橡胶垫（工作面）
-  g.add(box(len * 0.92, 0.004, defW * 0.9, MAT.rubber,
-    midX - 0.004 * Math.sin(ang), midY + 0.004 * Math.cos(ang), 0, 0, 0, ang));
+
+  // 横梁上的铰链座（固定，不随角度转）
   for (const s of [1, -1]) {
-    g.add(box(len, 0.036, 0.008, MAT.frame, midX, midY - 0.010, s * (defW / 2 + 0.006), 0, 0, ang));
-    const bz = s * (beamHalf - 0.03);
-    const dz = s * (defW / 2);
-    const armLen = Math.hypot(D.beamX - midX, beamH - midY);
-    const armAng = Math.atan2(midY - beamH, midX - D.beamX);
-    g.add(box(armLen, 0.016, 0.018, MAT.extrusion,
-      (D.beamX + midX) / 2, (beamH + midY) / 2, (bz + dz) / 2, 0, 0, armAng));
-    g.add(box(0.016, 0.028, 0.016, MAT.frame, midX, midY + 0.012, dz));
-  }
-  // 顶护板与挡板之间的结构连接
-  {
-    const aS = D.shroudStart + D.shroudSpan * 0.85;
-    const sx = AX + D.shroudR * Math.cos(aS);
-    const sy = AY + D.shroudR * Math.sin(aS);
-    const armLen = Math.hypot(sx - midX, sy - midY);
-    const armAng = Math.atan2(midY - sy, midX - sx);
-    for (const s of [1, -1]) {
-      g.add(box(armLen, 0.014, 0.014, MAT.extrusion,
-        (sx + midX) / 2, (sy + midY) / 2, s * (defW / 2 - 0.02), 0, 0, armAng));
-    }
+    g.add(cyl(0.010, 0.018, MAT.bearing,
+      D.beamX, beamH, s * (defW / 2 - 0.02), Math.PI / 2, 0, 0, 16));
+    g.add(box(0.024, 0.024, 0.012, MAT.frame,
+      D.beamX, beamH, s * (defW / 2 - 0.02 + 0.012)));
   }
 
+  // 挡板旋转体（铰链 + 2 杆 + 板），default 姿态对齐原 60° 位
+  const deflectorPivot = new THREE.Group();
+  deflectorPivot.position.set(D.beamX, beamH, 0);
+  g.add(deflectorPivot);
+  const localMidX = midX - D.beamX;
+  const localMidY = midY - beamH;
+  const armLen = Math.hypot(localMidX, localMidY);
+  const armAng = Math.atan2(localMidY, localMidX);
+
+  // 左右 2 根固定杆
+  for (const s of [1, -1]) {
+    const z = s * (defW / 2 - 0.02);
+    deflectorPivot.add(box(0.022, 0.022, 0.014, MAT.frame, 0, 0, z));
+    deflectorPivot.add(cyl(0.007, 0.012, MAT.metal, 0, 0, z, Math.PI / 2, 0, 0, 12));
+    deflectorPivot.add(box(armLen, 0.014, 0.014, MAT.extrusion,
+      localMidX / 2, localMidY / 2, z, 0, 0, armAng));
+    // 角度锁紧弧槽（示意）
+    deflectorPivot.add(box(armLen * 0.55, 0.004, 0.008, MAT.hole,
+      localMidX * 0.35, localMidY * 0.35, z + s * 0.008, 0, 0, armAng));
+    deflectorPivot.add(cyl(0.004, 0.010, MAT.metal,
+      localMidX * 0.35, localMidY * 0.35, z + s * 0.010, Math.PI / 2, 0, 0, 8));
+    // 板端夹块
+    deflectorPivot.add(box(0.018, 0.018, 0.016, MAT.frame, localMidX, localMidY, z));
+  }
+
+  // 挡板本体 + 橡胶垫 + 侧翻边
+  deflectorPivot.add(box(len, D.deflectorT, defW, MAT.def, localMidX, localMidY, 0, 0, 0, boardAng));
+  deflectorPivot.add(box(len * 0.92, 0.004, defW * 0.9, MAT.rubber,
+    localMidX - 0.004 * Math.sin(boardAng), localMidY + 0.004 * Math.cos(boardAng),
+    0, 0, 0, boardAng));
+  for (const s of [1, -1]) {
+    deflectorPivot.add(box(len, 0.036, 0.008, MAT.frame,
+      localMidX, localMidY - 0.010, s * (defW / 2 + 0.006), 0, 0, boardAng));
+  }
+
+  // 供动画/滑条使用
+  deflectorRef = {
+    pivot: deflectorPivot,
+    beamX: D.beamX,
+    beamY: beamH,
+    localMidX, localMidY, boardAng, len,
+  };
+
   reg('chassisTop', g, {
-    name: '导流上装（车架固定）', color: '#2b2e33', dims: '2020立柱·橡胶挡板',
+    name: '导流上装（铰链挡板）', color: '#2b2e33', dims: '2杆铰链 · 角度可调',
     group: 'collect',
-    desc: '顶护板、摄像头横梁、60°挡板全部 2020 生根车架，不随滚轮滑轨。挡板贴橡胶垫降噪防反弹。'
+    desc: '顶护板与横梁固定车架；挡板仅左右 2 杆，铰链挂在横梁上，侧栏可调反射角（±18°），橡胶垫降噪。'
   });
 }
 
@@ -926,6 +966,19 @@ const rollerPivot = new THREE.Group();
     zSlider.value = String(D.rollBottom);
     zSlider.addEventListener('input', () => applyRollBottom(parseFloat(zSlider.value)));
   }
+
+  // 挡板铰链角度
+  const defSlider = document.getElementById('def-slider');
+  const defVal = document.getElementById('def-val');
+  function applyDeflectorDeg(deg) {
+    if (!deflectorRef) return;
+    deflectorRef.pivot.rotation.z = deg * Math.PI / 180;
+    if (defVal) defVal.textContent = deg + '°';
+  }
+  applyDeflectorDeg(0);
+  if (defSlider) {
+    defSlider.addEventListener('input', () => applyDeflectorDeg(parseFloat(defSlider.value)));
+  }
 }
 
 // 摄像头：装在滚轮正上方横梁（车体固定，高度适中）
@@ -943,92 +996,164 @@ const rollerPivot = new THREE.Group();
 }
 
 /* ══════════════════════════════════════
-   3. 行走轮：四轮等大
-   前轮：筐前下沿 x=0.04，转向舵机
-   后轮：筐后 x=-0.28，差速驱动
+   3. 行走轮系（E1.2）
+   后轮：单电机 + 通轴（两轮同速）
+   前轮：中置单舵机 + 横拉杆转向（±30°）
+   轮距加宽 215mm，前轮外置有转向空间
    ══════════════════════════════════════ */
-// 后轮×2（驱动，JGB37-520 + Ø100 PU 实心轮 + 轮罩）
-for (const [key, wx, side, label] of [
-  ['wheel_rl', D.wxRear, 1, '左后驱动轮'],
-  ['wheel_rr', D.wxRear, -1, '右后驱动轮'],
-]) {
-  const g = new THREE.Group();
-  // PU 实心胎（微孔）
-  g.add(cyl(D.wr, D.ww, MAT.rubber, wx, D.wr, side * D.wy, Math.PI/2, 0, 0, 48));
-  // 胎面纹路示意
-  for (let i = 0; i < 12; i++) {
-    const a = i * Math.PI / 6;
-    g.add(box(0.006, 0.004, D.ww * 0.9, MAT.dark,
-      wx + (D.wr - 0.002) * Math.cos(a), D.wr + (D.wr - 0.002) * Math.sin(a),
-      side * D.wy, 0, 0, a));
-  }
-  // 轮毂 + 轴承盖
-  g.add(cyl(D.wr * 0.38, D.ww + 0.004, MAT.metal, wx, D.wr, side * D.wy, Math.PI/2, 0, 0));
-  g.add(cyl(0.012, D.ww + 0.010, MAT.bearing, wx, D.wr, side * D.wy, Math.PI/2, 0, 0, 20));
-  // JGB37-520 减速电机（轮内侧）
-  g.add(cyl(0.022, 0.048, MAT.dark,
-    wx, D.wr, side * (D.wy - D.ww/2 - 0.028), Math.PI/2, 0, 0, 28));
-  g.add(cyl(0.026, 0.010, MAT.metal,
-    wx, D.wr, side * (D.wy - D.ww/2 - 0.056), Math.PI/2, 0, 0, 20));
-  // 编码器端盖
-  g.add(cyl(0.014, 0.008, MAT.petg,
-    wx, D.wr, side * (D.wy - D.ww/2 - 0.064), Math.PI/2, 0, 0, 16));
-  g.add(cyl(0.003, 0.004, MAT.led,
-    wx, D.wr + 0.008, side * (D.wy - D.ww/2 - 0.064), Math.PI/2, 0, 0, 8));
-  // L 支架 → 底板（含硅胶减振垫）
-  g.add(box(0.048, 0.014, 0.024, MAT.frame,
-    wx, D.wr - 0.012, side * (D.wy - 0.030)));
-  g.add(box(0.036, 0.004, 0.020, MAT.seal,
-    wx, D.wr - 0.020, side * (D.wy - 0.030)));
-  g.add(box(0.014, 0.030, 0.014, MAT.frame,
-    wx, D.wr + 0.02, side * (D.wy - 0.030)));
-  // 半罩轮罩
-  g.add(box(D.wr * 1.8, 0.006, D.ww + 0.020, MAT.petg,
-    wx, D.wr + D.wr + 0.006, side * D.wy));
-  reg(key, g, {
-    name: label, color: '#0a0a0a', dims: 'Ø100 PU · 编码器',
-    group: 'drive',
-    desc: 'JGB37-520 12V 250RPM 带编码器 + Ø100 PU 实心轮。L 支架固定底板，下垫硅胶减振，配半罩。'
-  });
-}
-// 前轮×2（转向）：MG996R 舵机 + 转向节 + 随动轮
+// 后驱：1×JGB37-520 中置 + 通轴 + 左右轮
 {
   const g = new THREE.Group();
-  const fwX = D.wxFront; // 0.04
+  const wx = D.wxRear, wy = D.wy, wr = D.wr, ww = D.ww;
+
+  // 通轴 Ø10
+  g.add(cyl(0.005, 2 * wy + 0.02, MAT.metal, wx, wr, 0, Math.PI / 2, 0, 0, 16));
+
+  // 轴承座 ×2（车架上）
   for (const s of [1, -1]) {
-    g.add(cyl(D.wr, D.ww, MAT.rubber, fwX, D.wr, s * D.wy, Math.PI/2, 0, 0, 48));
+    const bz = s * 0.12;
+    g.add(cyl(0.014, 0.028, MAT.bearing, wx, wr, bz, Math.PI / 2, 0, 0, 24));
+    g.add(box(0.036, 0.036, 0.018, MAT.petg, wx, wr, bz + s * 0.018));
+    g.add(box(0.030, 0.014, 0.030, MAT.frame, wx, wr - 0.022, bz));
+    g.add(box(0.030, 0.014, 0.030, MAT.seal, wx, wr - 0.030, bz));
+  }
+
+  // 左右驱动轮
+  for (const s of [1, -1]) {
+    const z = s * wy;
+    g.add(cyl(wr, ww, MAT.rubber, wx, wr, z, Math.PI / 2, 0, 0, 48));
     for (let i = 0; i < 12; i++) {
       const a = i * Math.PI / 6;
-      g.add(box(0.006, 0.004, D.ww * 0.9, MAT.dark,
-        fwX + (D.wr - 0.002) * Math.cos(a), D.wr + (D.wr - 0.002) * Math.sin(a),
-        s * D.wy, 0, 0, a));
+      g.add(box(0.006, 0.004, ww * 0.9, MAT.dark,
+        wx + (wr - 0.002) * Math.cos(a), wr + (wr - 0.002) * Math.sin(a),
+        z, 0, 0, a));
     }
-    g.add(cyl(D.wr * 0.40, D.ww + 0.004, MAT.metal, fwX, D.wr, s * D.wy, Math.PI/2, 0, 0));
-    g.add(cyl(0.012, D.ww + 0.010, MAT.bearing, fwX, D.wr, s * D.wy, Math.PI/2, 0, 0, 20));
-    // 转向节立轴
-    g.add(cyl(0.009, 0.050, MAT.metal, fwX, D.wr + 0.022, s * D.wy, 0, 0, 0, 14));
-    g.add(box(0.036, 0.012, 0.020, MAT.petg, fwX, D.wr + 0.042, s * D.wy));
-    // MG996R 舵机
-    const sy = D.wr + 0.070;
-    g.add(box(0.040, 0.032, 0.036, MAT.dark, fwX, sy, s * D.wy));
-    g.add(box(0.044, 0.004, 0.040, MAT.frame, fwX, sy - 0.016, s * D.wy));
-    g.add(cyl(0.010, 0.006, MAT.metal, fwX, sy + 0.018, s * D.wy, 0, 0, 0, 12));
-    g.add(box(0.018, 0.008, 0.018, MAT.frame, fwX, sy + 0.022, s * D.wy));
-    // 机械限位块
-    g.add(box(0.012, 0.012, 0.012, MAT.petg, fwX + 0.020, D.wr + 0.048, s * D.wy));
-    // 上支臂 → 平台前部底
-    g.add(box(0.014, 0.036, 0.014, MAT.frame,
-      fwX, (sy + D.bodyZ) / 2, s * D.wy));
-    g.add(box(0.028, 0.012, 0.024, MAT.frame,
-      fwX, D.bodyZ + 0.016, s * D.wy));
+    g.add(cyl(wr * 0.38, ww + 0.004, MAT.metal, wx, wr, z, Math.PI / 2, 0, 0));
+    g.add(cyl(0.010, ww + 0.012, MAT.bearing, wx, wr, z, Math.PI / 2, 0, 0, 20));
     // 半罩
-    g.add(box(D.wr * 1.8, 0.006, D.ww + 0.020, MAT.petg,
-      fwX, D.wr + D.wr + 0.006, s * D.wy));
+    g.add(box(wr * 1.8, 0.006, ww + 0.020, MAT.petg,
+      wx, wr + wr + 0.006, z));
   }
-  reg('steer', g, {
-    name: '前轮转向组', color: '#0a0a0a', dims: 'MG996R · ±30°',
+
+  // 轴上大带轮
+  g.add(cyl(0.028, 0.014, MAT.metal, wx, wr, 0, Math.PI / 2, 0, 0, 28));
+
+  // 中置减速电机（略抬高，经同步带驱动通轴）
+  const moX = wx + 0.045, moY = wr + 0.042, moZ = 0;
+  g.add(cyl(0.024, 0.055, MAT.dark, moX, moY, moZ, Math.PI / 2, 0, 0, 32));
+  g.add(cyl(0.028, 0.028, MAT.metal, moX, moY, moZ + 0.042, Math.PI / 2, 0, 0, 32));
+  g.add(cyl(0.006, 0.018, MAT.metal, moX, moY, moZ + 0.068, Math.PI / 2, 0, 0, 12));
+  // 编码器端
+  g.add(cyl(0.014, 0.008, MAT.petg, moX, moY, moZ - 0.032, Math.PI / 2, 0, 0, 16));
+  g.add(cyl(0.003, 0.004, MAT.led, moX, moY + 0.010, moZ - 0.032, Math.PI / 2, 0, 0, 8));
+  // 电机座 → 底板
+  g.add(box(0.040, 0.012, 0.036, MAT.frame, moX, moY - 0.030, moZ));
+  g.add(box(0.014, 0.040, 0.014, MAT.frame, moX, (D.bodyZ + moY) / 2 - 0.005, moZ));
+  g.add(box(0.030, 0.012, 0.028, MAT.frame, moX, D.bodyZ + 0.012, moZ));
+  g.add(box(0.024, 0.004, 0.022, MAT.seal, moX, D.bodyZ + 0.020, moZ));
+
+  // 电机小带轮 + 同步带
+  g.add(cyl(0.014, 0.012, MAT.metal, moX, moY, moZ + 0.012, Math.PI / 2, 0, 0, 20));
+  {
+    const dx = wx - moX, dy = wr - moY;
+    const beltLen = Math.hypot(dx, dy);
+    const beltAng = Math.atan2(dy, dx);
+    const beltZ = 0.010;
+    g.add(box(beltLen, 0.006, 0.004, MAT.rubber,
+      (wx + moX) / 2, (wr + moY) / 2 + 0.020, beltZ, 0, 0, beltAng));
+    g.add(box(beltLen, 0.006, 0.004, MAT.rubber,
+      (wx + moX) / 2, (wr + moY) / 2 - 0.020, beltZ, 0, 0, beltAng));
+  }
+
+  // 线束 → 电控
+  const pts = [
+    new THREE.Vector3(moX, moY - 0.02, moZ - 0.02),
+    new THREE.Vector3(moX + 0.02, D.bodyZ + 0.04, 0.06),
+    new THREE.Vector3(-0.02, D.bodyZ + 0.05, 0.10),
+  ];
+  g.add(new THREE.Mesh(
+    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.003, 6, false),
+    MAT.hole
+  ));
+
+  reg('rearDrive', g, {
+    name: '后驱（单电机通轴）', color: '#1a1c20', dims: '1×JGB37 · Ø100×2',
     group: 'drive',
-    desc: '前轮随动 + MG996R 舵机转向，机械限位 ±30°。PETG 转向节，Ø100 PU 轮与后轮统一备件。'
+    desc: '1 台 JGB37-520 中置，GT2 带驱动后通轴，左右轮同速。前轮负责转向，后轮只驱动；比双电机省一套驱动与编码器。'
+  });
+}
+
+// 前轮转向：中置舵机 + 转向节 + 横拉杆（轮外置，有扫掠空间）
+{
+  const g = new THREE.Group();
+  const fwX = D.wxFront;
+  const wy = D.wy, wr = D.wr, ww = D.ww;
+  const knuckleY = wr + 0.018; // 主销下端
+  const armY = wr + 0.048;     // 转向臂高度
+  const armOut = 0.028;        // 臂向内侧伸出
+
+  // 中置舵机（挂在前横梁下，清晰可见）
+  const servoY = D.bodyZ - 0.028;
+  g.add(box(0.048, 0.036, 0.040, MAT.dark, fwX + 0.010, servoY, 0));
+  g.add(box(0.052, 0.005, 0.044, MAT.frame, fwX + 0.010, servoY - 0.018, 0));
+  // 舵机耳固定到底板
+  g.add(box(0.020, 0.024, 0.014, MAT.frame, fwX + 0.010, servoY + 0.016, 0.022));
+  g.add(box(0.020, 0.024, 0.014, MAT.frame, fwX + 0.010, servoY + 0.016, -0.022));
+  g.add(box(0.036, 0.010, 0.056, MAT.frame, fwX + 0.010, D.bodyZ - 0.004, 0));
+  // 舵盘 + 输出臂（朝左）
+  g.add(cyl(0.012, 0.008, MAT.metal, fwX + 0.010, servoY + 0.020, 0, 0, 0, 0, 16));
+  g.add(box(0.010, 0.008, 0.070, MAT.fin, fwX + 0.010, servoY + 0.024, 0.028));
+
+  for (const s of [1, -1]) {
+    const z = s * wy;
+    // 车架外伸支臂（轮在底盘外侧，不卡转向）
+    g.add(box(0.030, 0.014, 0.040, MAT.extrusion,
+      fwX, D.bodyZ + 0.008, s * (wy - 0.055)));
+    g.add(box(0.014, 0.036, 0.014, MAT.frame,
+      fwX, (D.bodyZ + knuckleY) / 2 + 0.01, s * (wy - 0.020)));
+    // 主销 / 转向节
+    g.add(cyl(0.008, 0.060, MAT.metal, fwX, knuckleY + 0.022, z, 0, 0, 0, 14));
+    g.add(box(0.032, 0.012, 0.024, MAT.petg, fwX, knuckleY + 0.008, z));
+    // 转向臂伸向内侧（接横拉杆）
+    g.add(box(0.012, 0.010, armOut, MAT.frame,
+      fwX, armY, z - s * armOut / 2));
+    g.add(cyl(0.005, 0.012, MAT.metal, fwX, armY, z - s * armOut, Math.PI / 2, 0, 0, 10));
+    // 机械限位
+    g.add(box(0.010, 0.012, 0.010, MAT.petg, fwX + 0.018, armY + 0.008, z - s * 0.012));
+
+    // 随动轮
+    g.add(cyl(wr, ww, MAT.rubber, fwX, wr, z, Math.PI / 2, 0, 0, 48));
+    for (let i = 0; i < 12; i++) {
+      const a = i * Math.PI / 6;
+      g.add(box(0.006, 0.004, ww * 0.9, MAT.dark,
+        fwX + (wr - 0.002) * Math.cos(a), wr + (wr - 0.002) * Math.sin(a),
+        z, 0, 0, a));
+    }
+    g.add(cyl(wr * 0.40, ww + 0.004, MAT.metal, fwX, wr, z, Math.PI / 2, 0, 0));
+    g.add(cyl(0.012, ww + 0.010, MAT.bearing, fwX, wr, z, Math.PI / 2, 0, 0, 20));
+    // 半罩（固定在转向节，随轮转）
+    g.add(box(wr * 1.7, 0.006, ww + 0.018, MAT.petg,
+      fwX, wr + wr + 0.004, z));
+  }
+
+  // 横拉杆：舵机臂 → 左臂 → 右臂
+  const linkY = armY;
+  const linkZL = wy - armOut;   // 左接点
+  const linkZR = -(wy - armOut);
+  g.add(cyl(0.004, Math.abs(linkZL - linkZR) + 0.01, MAT.metal,
+    fwX + 0.010, linkY, (linkZL + linkZR) / 2, Math.PI / 2, 0, 0, 12));
+  // 球头示意
+  for (const z of [linkZL, 0.028, linkZR]) {
+    g.add(cyl(0.006, 0.008, MAT.bearing, fwX + 0.010, linkY, z, Math.PI / 2, 0, 0, 12));
+  }
+  // 舵机臂到横拉杆的短拉杆
+  g.add(cyl(0.0035, 0.030, MAT.metal,
+    fwX + 0.010, linkY - 0.012, 0.028, 0, 0, 0.15, 10));
+
+  reg('steer', g, {
+    name: '前轮转向（中置舵机）', color: '#0a0a0a', dims: '1×MG996R · ±30°',
+    group: 'drive',
+    desc: '轮距 215mm，轮在底盘外侧有扫掠空间。中置 MG996R + 横拉杆带动左右转向节，机械限位 ±30°；前轮只转向不驱动。'
   });
 }
 {
@@ -1186,9 +1311,27 @@ function exitTangent(a) {
   return { vx: s / n, vy: c / n };
 }
 function deflectorYAt(x) {
-  const t = (x - D.deflectorX0) / (D.deflectorX1 - D.deflectorX0);
-  if (t < 0 || t > 1) return null;
-  return D.deflectorY0 + (D.deflectorY1 - D.deflectorY0) * t;
+  if (!deflectorRef) {
+    const t = (x - D.deflectorX0) / (D.deflectorX1 - D.deflectorX0);
+    if (t < 0 || t > 1) return null;
+    return D.deflectorY0 + (D.deflectorY1 - D.deflectorY0) * t;
+  }
+  const { pivot, beamX, beamY, localMidX, localMidY, boardAng, len } = deflectorRef;
+  const rot = pivot.rotation.z;
+  const hx = Math.cos(boardAng) * len / 2;
+  const hy = Math.sin(boardAng) * len / 2;
+  const c = Math.cos(rot), s = Math.sin(rot);
+  const lx0 = localMidX - hx, ly0 = localMidY - hy;
+  const lx1 = localMidX + hx, ly1 = localMidY + hy;
+  const x0 = beamX + c * lx0 - s * ly0;
+  const y0 = beamY + s * lx0 + c * ly0;
+  const x1 = beamX + c * lx1 - s * ly1;
+  const y1 = beamY + s * lx1 + c * ly1;
+  const dx = x1 - x0;
+  if (Math.abs(dx) < 1e-6) return null;
+  const t = (x - x0) / dx;
+  if (t < -0.02 || t > 1.02) return null;
+  return y0 + (y1 - y0) * t;
 }
 
 const PHASE = {
@@ -1343,8 +1486,7 @@ const EX = {
   rollDrive:new THREE.Vector3(0.06, 0.04, 0.16),
   guard:    new THREE.Vector3(0.06, 0.10, 0),
   basket:   new THREE.Vector3(-0.05, 0.18, 0),
-  wheel_rl: new THREE.Vector3(0, 0, 0.12),
-  wheel_rr: new THREE.Vector3(0, 0, -0.12),
+  rearDrive:new THREE.Vector3(-0.28, 0.05, 0),
   steer:    new THREE.Vector3(0.04, 0.02, 0),
   camera:   new THREE.Vector3(0.02, 0.12, 0),
   battery:  new THREE.Vector3(-0.02, -0.06, 0),
@@ -1366,20 +1508,38 @@ meta.forEach(p => {
   G[p.group].appendChild(b);
 });
 
+function clearHighlight() {
+  Object.keys(parts).forEach(k => {
+    parts[k].traverse(c => {
+      if (c.isMesh && c.userData._origMat) c.material = c.userData._origMat;
+    });
+  });
+}
+
+function applyHighlight(key) {
+  Object.keys(parts).forEach(k => {
+    parts[k].traverse(c => {
+      if (!c.isMesh) return;
+      if (!c.userData._origMat) c.userData._origMat = c.material;
+      const orig = c.userData._origMat;
+      if (orig === MAT.led || orig === MAT.ballHot) return;
+      if (k === key) {
+        if (!c.userData._hlMat) c.userData._hlMat = orig.clone();
+        c.userData._hlMat.emissive.setHex(0xff6a12);
+        c.userData._hlMat.emissiveIntensity = 1.15;
+        c.material = c.userData._hlMat;
+      } else {
+        c.material = orig;
+      }
+    });
+  });
+}
+
 function focus(key) {
   selected = key;
   document.querySelectorAll('.pb').forEach(b =>
     b.classList.toggle('on', b.dataset.k === key));
-  Object.keys(parts).forEach(k => {
-    parts[k].traverse(c => {
-      if (c.isMesh && c.material.emissive &&
-          !c.material.equals(MAT.led) && !c.material.equals(MAT.ballHot)) {
-        if (!c.userData._orig) c.userData._orig = c.material;
-        c.material = c.material.clone();
-        c.material.emissive.setHex(k === key ? 0x442200 : 0x000000);
-      }
-    });
-  });
+  applyHighlight(key);
   const g = parts[key];
   if (!g) return;
   const bb = new THREE.Box3().setFromObject(g);
@@ -1398,7 +1558,7 @@ document.getElementById('b-anim').onclick = e => {
   e.target.textContent = ANIM.playing ? '暂停动画' : '播放动画';
   if (ANIM.playing && animBalls.length === 0) spawnAnimBall();
 };
-// 取下 / 放上球筐
+// 取下 / 放上球筐（动画：移到车旁露出底盘布置）
 let basketOff = false;
 document.getElementById('b-basket').onclick = e => {
   basketOff = !basketOff;
@@ -1406,10 +1566,11 @@ document.getElementById('b-basket').onclick = e => {
   e.target.textContent = basketOff ? '放上球筐' : '取下球筐';
   const g = parts.basket;
   if (!g) return;
+  // 目标用本地坐标：筐挂在 robot 原点
   if (basketOff) {
-    g.userData.tgt = new THREE.Vector3(0, 0.35, -0.70); // 挪到车旁
+    g.userData.tgt = new THREE.Vector3(0, 0.28, -0.78);
   } else {
-    g.userData.tgt = new THREE.Vector3(0, 0, 0); // 回到平台上
+    g.userData.tgt = new THREE.Vector3(0, 0, 0);
   }
 };
 document.getElementById('b-wi').onclick = e => {
@@ -1424,6 +1585,7 @@ document.getElementById('b-gr').onclick = e => {
 document.getElementById('b-reset').onclick = () => {
   selected = null;
   document.querySelectorAll('.pb').forEach(b => b.classList.remove('on'));
+  clearHighlight();
   camera.position.copy(homePos);
   ctrl.target.set(0, 0.16, 0);
   ctrl.update();
@@ -1436,6 +1598,15 @@ let last = performance.now();
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   updateAnim(dt);
+  // 球筐取放动画
+  const bg = parts.basket;
+  if (bg?.userData?.tgt) {
+    const k = 1 - Math.pow(0.002, dt);
+    bg.position.lerp(bg.userData.tgt, k);
+    if (bg.position.distanceTo(bg.userData.tgt) < 0.003) {
+      bg.position.copy(bg.userData.tgt);
+    }
+  }
   ctrl.update();
   renderer.render(scene, camera);
 })(last);

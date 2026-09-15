@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KIT-TBR-01 · 发球-捡球仿真</title>
+<style>
+:root{--bg:#0b1016;--panel:#121820;--ink:#e8eef4;--muted:#8b9aab;--accent:#e85d04;--line:#253040;--ok:#3dd68c;--warn:#f0b429}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);display:grid;grid-template-columns:300px 1fr;overflow:hidden}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:14px 13px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+h1{font-size:15px;font-weight:650}
+.sub{font-size:11.5px;color:var(--muted);line-height:1.55}
+.card{background:#0d131b;border:1px solid var(--line);border-radius:10px;padding:10px 11px}
+.gt{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat div{background:#0d131b;border:1px solid var(--line);border-radius:9px;padding:8px 9px}
+.stat b{display:block;font-size:17px;color:var(--accent);font-variant-numeric:tabular-nums}
+.stat span{font-size:10.5px;color:var(--muted)}
+.state-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:7px 0;border-bottom:1px solid #1a2430}
+.state-row:last-child{border-bottom:none}
+.badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:#1a2838;color:var(--ok)}
+.badge.warn{color:var(--warn)}.badge.idle{color:var(--muted)}
+.acts{display:flex;flex-wrap:wrap;gap:6px}
+.act{padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:#0d131b;color:var(--ink);font-size:12.5px;cursor:pointer;min-height:38px}
+.act:hover{border-color:var(--accent);color:var(--accent)}
+.act:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.act.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.act.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:650;min-width:118px}
+.log{font-size:11px;color:var(--muted);line-height:1.55;max-height:150px;overflow-y:auto;font-variant-numeric:tabular-nums}
+.log div{padding:2px 0;border-bottom:1px solid #15202c}
+.log .t{color:#5a6d80;margin-right:6px}
+main{position:relative;min-width:0;min-height:0;background:#070a0e}
+#w{width:100%;height:100%}
+canvas{display:block;width:100%!important;height:100%!important}
+.hud{position:absolute;left:14px;top:14px;font-size:12px;background:rgba(10,14,20,.78);border:1px solid rgba(80,100,120,.35);padding:9px 12px;border-radius:9px;pointer-events:none;line-height:1.55}
+.hud .k{color:var(--muted)}
+.hint{position:absolute;right:14px;top:14px;font-size:11px;color:var(--muted);background:rgba(10,14,20,.72);padding:7px 10px;border-radius:8px;pointer-events:none;border:1px solid rgba(80,100,120,.25)}
+.phase{position:absolute;left:14px;bottom:14px;font-size:12px;color:var(--ok);background:rgba(10,14,20,.8);padding:8px 12px;border-radius:8px;pointer-events:none;border:1px solid rgba(61,214,140,.25);min-width:220px}
+@media(max-width:820px){body{grid-template-columns:1fr;grid-template-rows:1fr 230px}aside{order:2;border-right:none;border-top:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<aside>
+  <div>
+    <h1>KIT-TBR-01 · 发球-捡球仿真</h1>
+    <p class="sub">发球机底线发球 · 物理弹跳滚动 · 完整工程化机器人 · 仅前滚轮吸入 · 捡完回发球机旁</p>
+  </div>
+  <div class="stat">
+    <div><b id="s-picked">0</b><span>已入筐</span></div>
+    <div><b id="s-left">0</b><span>场上剩余</span></div>
+    <div><b id="s-hopper">60</b><span>发球机余弹</span></div>
+    <div><b id="s-time">0.0</b><span>用时 s</span></div>
+  </div>
+  <div class="card">
+    <div class="gt">运行状态</div>
+    <div class="state-row"><span>状态机</span><span class="badge idle" id="st-state">待命</span></div>
+    <div class="state-row"><span>吸入相位</span><span id="st-phase" style="color:var(--muted)">—</span></div>
+    <div class="state-row"><span>目标球</span><span id="st-target" style="color:var(--muted)">—</span></div>
+    <div class="state-row"><span>速度 / 转角</span><span id="st-mot" style="font-variant-numeric:tabular-nums">0.00 · 0°</span></div>
+  </div>
+  <div class="card">
+    <div class="gt">控制</div>
+    <div class="acts" style="margin-top:8px">
+      <button class="act primary" id="b-fire">开始发球</button>
+      <button class="act primary" id="b-collect">开始捡球</button>
+      <button class="act" id="b-pause">暂停</button>
+      <button class="act" id="b-reset">重置</button>
+      <button class="act on" id="b-follow">跟随</button>
+      <button class="act" id="b-sensor">感知圈</button>
+    </div>
+    <p class="sub" style="margin-top:8px">发球机 60 球；捡满 30 回起点倒回料斗，场上还有球会自动再去捡。</p>
+  </div>
+  <div class="card">
+    <div class="gt">决策日志</div>
+    <div class="log" id="log" style="margin-top:6px"></div>
+  </div>
+  <p class="sub">吸入约束：球必须在机器人本地 +X 前方滚轮口内（|Z|≤20cm），侧后方不会入筐。入筐动画：轮下拖入 → 同轴弧上升 → 撞 60° 挡板 → 弹入筐。</p>
+</aside>
+<main>
+  <div id="w"></div>
+  <div class="hud">
+    <div><span class="k">状态 </span><span id="hud-state">待命</span></div>
+    <div><span class="k">筐内 </span><span id="hud-bag">0 / 30</span></div>
+    <div><span class="k">场上 </span><span id="hud-left">0</span></div>
+    <div><span class="k">里程 </span><span id="hud-odo">0.0 m</span></div>
+  </div>
+  <div class="hint">拖拽旋转 · 滚轮缩放 · 跟随时焦点跟车、视角仍可调</div>
+  <div class="phase" id="phase">物理引擎待命 · 点击开始发球</div>
+</main>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ═══ 工程尺寸（与 index.html 一致） ═══ */
+const D = {
+  bodyX0:-0.30,bodyL:0.56,bodyW:0.46,bodyH:0.135,bodyZ:0.035,
+  get bodyTop(){return this.bodyZ+this.bodyH},get bodyCx(){return this.bodyX0+this.bodyL/2},
+  get bodyFront(){return this.bodyX0+this.bodyL},
+  mouthW:0.40,mouthH:0.12,mouthZ:0.055,
+  rollD:0.14,rollL:0.36,rollX:0.24,rollBottom:0.068,
+  get rollZ(){return this.rollBottom+this.rollD/2},finH:0.012,
+  guideGap:0.065,get guideR(){return this.rollD/2+this.guideGap},
+  guideA0:3.70,guideA1:3.20,guideChW:0.40,guideWallH:0.060,
+  shroudR:0.105,shroudSpan:Math.PI*0.42,shroudStart:0.40,
+  deflectorX0:0.150,deflectorY0:0.400,deflectorX1:0.085,deflectorY1:0.520,deflectorT:0.012,
+  topSlotW:0.30,botSlotX0:0.10,
+  beamY:0.27,beamX:0.21,
+  basketX0:-0.30,basketL:0.36,basketW:0.42,basketH:0.16,basketZ0:0.17,
+  get basketFront(){return this.basketX0+this.basketL},get basketCx(){return this.basketX0+this.basketL/2},
+  wr:0.050,ww:0.038,wy:0.215,wxFront:0.040,wxRear:-0.280,mh:0.045,
+};
+const BR=0.0335;
+const BASE_ROLL_X=0.24;
+
+const MAT={
+  extrusion:new THREE.MeshStandardMaterial({color:0x2b2e33,metalness:0.72,roughness:0.38}),
+  plate:new THREE.MeshStandardMaterial({color:0x9aa1a8,metalness:0.82,roughness:0.32}),
+  box:new THREE.MeshStandardMaterial({color:0xe85d04,metalness:0.05,roughness:0.38}),
+  dark:new THREE.MeshStandardMaterial({color:0x1a1c20,metalness:0.2,roughness:0.45}),
+  roll:new THREE.MeshStandardMaterial({color:0x3a3c40,roughness:0.88}),
+  rollCore:new THREE.MeshStandardMaterial({color:0x6a7078,metalness:0.75,roughness:0.30}),
+  fin:new THREE.MeshStandardMaterial({color:0x4a4c50,roughness:0.82}),
+  petg:new THREE.MeshStandardMaterial({color:0xc8ccd2,metalness:0.12,roughness:0.48}),
+  rubber:new THREE.MeshStandardMaterial({color:0x0a0a0a,roughness:0.92}),
+  seal:new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:0.95}),
+  metal:new THREE.MeshStandardMaterial({color:0x8a9098,metalness:0.88,roughness:0.28}),
+  bearing:new THREE.MeshStandardMaterial({color:0xb0b6bc,metalness:0.92,roughness:0.22}),
+  hole:new THREE.MeshStandardMaterial({color:0x08080a,roughness:0.88}),
+  def:new THREE.MeshStandardMaterial({color:0xc4cad2,metalness:0.75,roughness:0.30}),
+  white:new THREE.MeshStandardMaterial({color:0xe6e6e6,roughness:0.4}),
+  glass:new THREE.MeshStandardMaterial({color:0x0c2840,metalness:0.4,roughness:0.08}),
+  led:new THREE.MeshStandardMaterial({color:0x22d866,emissive:0x11aa44,emissiveIntensity:0.75}),
+  estop:new THREE.MeshStandardMaterial({color:0xcc2200,emissive:0x440000,emissiveIntensity:0.25}),
+  frame:new THREE.MeshStandardMaterial({color:0x2a2e34,metalness:0.4,roughness:0.42}),
+  shell:new THREE.MeshStandardMaterial({color:0xd2d4d8,roughness:0.4}),
+};
+function bx(w,h,d,mat,x,y,z,rx,ry,rz){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+  m.position.set(x||0,y||0,z||0);m.rotation.set(rx||0,ry||0,rz||0);
+  m.castShadow=m.receiveShadow=true;return m;
+}
+function cy(r,h,mat,x,y,z,rx,ry,rz,seg){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg||32),mat);
+  m.position.set(x||0,y||0,z||0);m.rotation.set(rx||0,ry||0,rz||0);
+  m.castShadow=true;return m;
+}
+
+/* ═══ 完整机器人（几何对齐 index.html） ═══ */
+function buildRobot(){
+  const root=new THREE.Group();
+  const parts={};
+  // 车体
+  {
+    const g=new THREE.Group(), t=0.013, bz=D.bodyZ+D.bodyH/2;
+    const topRearL=D.basketFront-D.bodyX0;
+    g.add(bx(topRearL,t,D.bodyW,MAT.plate,D.bodyX0+topRearL/2,D.bodyTop-t/2,0));
+    const topFrontL=D.bodyFront-D.basketFront, topSideW=(D.bodyW-D.topSlotW)/2;
+    for(const s of [1,-1]) g.add(bx(topFrontL,t,topSideW,MAT.plate,D.basketFront+topFrontL/2,D.bodyTop-t/2,s*(D.topSlotW/2+topSideW/2)));
+    for(const s of [1,-1]) g.add(bx(D.bodyL,0.02,0.02,MAT.extrusion,D.bodyCx,D.bodyTop-0.01,s*(D.bodyW/2-0.012)));
+    const botRearL=D.botSlotX0-D.bodyX0;
+    g.add(bx(botRearL,t,D.bodyW,MAT.plate,D.bodyX0+botRearL/2,D.bodyZ+t/2,0));
+    const botFrontL=D.bodyFront-D.botSlotX0, botSideW=0.035, botHalf=D.bodyW/2-botSideW;
+    for(const s of [1,-1]) g.add(bx(botFrontL,t,botSideW,MAT.plate,D.botSlotX0+botFrontL/2,D.bodyZ+t/2,s*(botHalf-botSideW/2)));
+    for(const s of [1,-1]) g.add(bx(0.10,t+0.006,0.09,MAT.hole,D.wxFront,D.bodyZ+t/2,s*(D.wy-0.02)));
+    g.add(bx(0.055,t+0.004,0.055,MAT.hole,D.wxRear,D.bodyZ+t/2,0));
+    const skirt=0.10-D.bodyX0;
+    for(const s of [1,-1]) g.add(bx(skirt,D.bodyH,t,MAT.plate,D.bodyX0+skirt/2,bz,s*(D.bodyW/2-t/2)));
+    g.add(bx(t,D.bodyH,D.bodyW,MAT.plate,D.bodyX0+t/2,bz,0));
+    const mouthTop=D.mouthZ+D.mouthH/2, upH=D.bodyTop-mouthTop-0.004;
+    if(upH>0.01) g.add(bx(t,upH,D.bodyW,MAT.plate,D.bodyFront-t/2,mouthTop+upH/2+0.004,0));
+    const sideW2=(D.bodyW-D.mouthW)/2, cheekH=mouthTop-D.bodyZ;
+    for(const s of [1,-1]) g.add(bx(t,cheekH,sideW2,MAT.plate,D.bodyFront-t/2,D.bodyZ+cheekH/2,s*(D.mouthW/2+sideW2/2)));
+    for(const s of [1,-1]) g.add(bx(skirt*0.85,0.025,0.018,MAT.rubber,D.bodyX0+skirt*0.5,D.bodyZ+0.022,s*(D.bodyW/2+0.006)));
+    g.add(bx(0.06,0.008,0.018,MAT.led,D.bodyFront-0.02,D.bodyTop-0.012,0));
+    for(const s of [1,-1]) g.add(bx(D.basketL+0.01,0.008,0.012,MAT.frame,D.basketCx,D.bodyTop+0.004,s*D.basketW/2));
+    // 急停
+    const ex=D.bodyX0+0.04;
+    g.add(bx(0.028,0.012,0.028,MAT.dark,ex,D.bodyTop+0.008,0));
+    g.add(cy(0.012,0.018,MAT.estop,ex,D.bodyTop+0.022,0,0,0,0,24));
+    root.add(g); parts.body=g;
+  }
+  // 球筐
+  const basket=new THREE.Group();
+  {
+    const g=basket,t=0.012,bz=D.basketZ0,cx=D.basketCx,H=D.basketH;
+    g.add(bx(D.basketL,t,D.basketW,MAT.box,cx,bz+t/2,0));
+    for(let ix=0;ix<5;ix++) for(let iz=0;iz<4;iz++)
+      g.add(cy(0.004,t+0.002,MAT.hole,D.basketX0+0.05+ix*0.065,bz+t/2,-0.12+iz*0.08,0,0,0,8));
+    g.add(bx(t,H,D.basketW,MAT.box,D.basketX0+t/2,bz+H/2,0));
+    for(const s of [1,-1]){
+      g.add(bx(D.basketL,H,t,MAT.box,cx,bz+H/2,s*(D.basketW/2-t/2)));
+      g.add(bx(0.10,0.03,0.016,MAT.frame,cx,bz+H*0.55,s*(D.basketW/2+0.002)));
+      g.add(bx(0.024,0.016,0.010,MAT.metal,cx,bz+H-0.030,s*(D.basketW/2+0.004)));
+      g.add(cy(0.0045,0.012,MAT.hole,cx,bz+H-0.030,s*(D.basketW/2+0.008),Math.PI/2,0,0,10));
+      for(let i=0;i<3;i++) g.add(bx(0.07,0.018,t+0.002,MAT.hole,D.basketX0+0.08+i*0.09,bz+H*0.45,s*(D.basketW/2-t/2)));
+    }
+    g.add(bx(t,H,D.basketW,MAT.box,D.basketFront-t/2,bz+H/2,0));
+    g.add(bx(D.basketL,0.012,0.014,MAT.frame,cx,bz+H,D.basketW/2-0.01));
+    g.add(bx(D.basketL,0.012,0.014,MAT.frame,cx,bz+H,-(D.basketW/2-0.01)));
+    g.add(bx(0.014,0.012,D.basketW,MAT.frame,D.basketX0,bz+H,0));
+    g.add(bx(0.014,0.012,D.basketW,MAT.frame,D.basketFront,bz+H,0));
+    g.add(bx(0.03,0.02,0.14,MAT.rubber,D.basketX0-0.02,bz+H+0.02,0));
+    for(const sx of [D.basketX0+0.01,D.basketFront-0.01])
+      for(const sz of [D.basketW/2-0.01,-(D.basketW/2-0.01)])
+        g.add(bx(0.022,H,0.022,MAT.petg,sx,bz+H/2,sz));
+    root.add(g); parts.basket=g;
+  }
+  // frontUnit + 滚轮
+  const frontUnit=new THREE.Group(); root.add(frontUnit);
+  const rollAdj={bottom:D.rollBottom};
+  const rollAxisX=()=>D.rollX;
+  const rollAxisY=()=>rollAdj.bottom+D.rollD/2;
+  function applyFrontUnitOffset(){frontUnit.position.x=D.rollX;frontUnit.position.y=rollAdj.bottom-D.rollBottom;}
+  applyFrontUnitOffset();
+  let deflectorRef=null;
+  const rollerPivot=new THREE.Group();
+  {
+    const g=new THREE.Group();
+    rollerPivot.position.set(0,D.rollZ,0); g.add(rollerPivot);
+    rollerPivot.add(cy(D.rollD/2-0.010,D.rollL,MAT.rollCore,0,0,0,Math.PI/2,0,0,48));
+    rollerPivot.add(cy(D.rollD/2,D.rollL-0.008,MAT.roll,0,0,0,Math.PI/2,0,0,64));
+    rollerPivot.add(cy(0.004,D.rollL+0.06,MAT.metal,0,0,0,Math.PI/2,0,0,16));
+    const ribN=6,slices=18;
+    for(let si=0;si<slices;si++){
+      const z=-D.rollL/2+(si+0.5)*(D.rollL/slices);
+      for(let ri=0;ri<ribN;ri++){
+        const ang=(ri*2*Math.PI/ribN)+(si/slices)*1.15;
+        const r=D.rollD/2+D.finH/2;
+        rollerPivot.add(bx(0.008,D.finH,D.rollL/slices*0.85,MAT.fin,r*Math.cos(ang),r*Math.sin(ang),z,0,0,-ang+Math.PI/2));
+      }
+    }
+    for(const s of [1,-1]){
+      g.add(cy(D.rollD/2+0.002,0.014,MAT.fin,0,D.rollZ,s*(D.rollL/2+0.006),Math.PI/2,0,0,48));
+      g.add(cy(0.032,0.012,MAT.petg,0,D.rollZ,s*(D.rollL/2+0.018),Math.PI/2,0,0,32));
+      g.add(cy(0.014,0.008,MAT.bearing,0,D.rollZ,s*(D.rollL/2+0.026),Math.PI/2,0,0,24));
+    }
+    const bearingZ=D.bodyW/2-0.032;
+    for(const s of [1,-1]){
+      g.add(cy(0.022,0.020,MAT.bearing,0,D.rollZ,s*bearingZ,Math.PI/2,0,0,32));
+      g.add(bx(0.044,0.044,0.016,MAT.petg,0,D.rollZ,s*(bearingZ+0.014)));
+      const upH=D.bodyTop-D.rollZ-0.02;
+      g.add(bx(0.018,upH,0.018,MAT.extrusion,0,D.rollZ+0.02+upH/2,s*(bearingZ+0.010)));
+      const dnH=D.rollZ-0.02-D.bodyZ;
+      g.add(bx(0.018,dnH,0.018,MAT.extrusion,0,D.rollZ-0.02-dnH/2,s*(bearingZ+0.010)));
+      g.add(bx(0.050,0.014,0.022,MAT.frame,0,D.bodyTop-0.01,s*(D.bodyW/2-0.020)));
+      g.add(bx(0.030,0.014,0.020,MAT.frame,0,D.bodyZ+0.02,s*(D.bodyW/2-0.020)));
+    }
+    g.add(bx(0.012,0.010,D.rollL*0.92,MAT.petg,0.02,D.rollZ+D.rollD/2+0.014,0));
+    g.userData.spinPivot=rollerPivot;
+    frontUnit.add(g); parts.roller=g;
+  }
+  // 滚轮电机+GT2（坐标必须相对 frontUnit 原点=滚轮轴，不能再次加 D.rollX）
+  {
+    const g=new THREE.Group();
+    const motorY=D.rollZ;      // 与滚轮轴同高
+    const motorZ=0.155;        // 车体内侧
+    const motorX=-0.02;        // 相对滚轮轴略靠后（frontUnit 本地）
+    g.add(cy(0.024,0.055,MAT.dark,motorX,motorY,motorZ,Math.PI/2,0,0,32));
+    g.add(cy(0.028,0.028,MAT.metal,motorX,motorY,motorZ+0.042,Math.PI/2,0,0,32));
+    g.add(cy(0.006,0.018,MAT.metal,motorX,motorY,motorZ+0.068,Math.PI/2,0,0,12));
+    g.add(bx(0.048,0.012,0.040,MAT.frame,motorX,motorY-0.036,motorZ-0.010));
+    g.add(bx(0.014,0.050,0.016,MAT.extrusion,motorX-0.010,(D.bodyTop+D.bodyZ)/2-D.rollBottom,motorZ-0.008));
+    const pulleyR1=0.020,pulleyR2=0.014,beltZ=motorZ-0.012;
+    // 大带轮在滚轮轴上（frontUnit 本地 x=0）
+    g.add(cy(pulleyR1,0.012,MAT.metal,0,D.rollZ,beltZ,Math.PI/2,0,0,24));
+    g.add(cy(pulleyR2,0.012,MAT.metal,motorX,motorY,beltZ,Math.PI/2,0,0,20));
+    g.add(cy(pulleyR1+0.001,0.008,MAT.rubber,0,D.rollZ,beltZ,Math.PI/2,0,0,24));
+    g.add(cy(pulleyR2+0.001,0.008,MAT.rubber,motorX,motorY,beltZ,Math.PI/2,0,0,20));
+    const dx=motorX-0,dy=motorY-D.rollZ,beltLen=Math.hypot(dx,dy)||0.02,beltAng=Math.atan2(dy,dx);
+    g.add(bx(beltLen,0.006,0.004,MAT.rubber,motorX/2,(D.rollZ+motorY)/2+(pulleyR1+pulleyR2)/2,beltZ,0,0,beltAng));
+    g.add(bx(beltLen,0.006,0.004,MAT.rubber,motorX/2,(D.rollZ+motorY)/2-(pulleyR1+pulleyR2)/2,beltZ,0,0,beltAng));
+    // 张紧惰轮
+    const midX=motorX/2+0.004, midY=(D.rollZ+motorY)/2-0.018;
+    g.add(cy(0.008,0.010,MAT.rubber,midX,midY,beltZ,Math.PI/2,0,0,16));
+    frontUnit.add(g); parts.rollDrive=g;
+  }
+  // 同轴弧道
+  {
+    const g=new THREE.Group(); frontUnit.add(g);
+    const AX=0,AY=D.rollZ,chW=D.guideChW,wallH=D.guideWallH,a0=D.guideA0,a1=D.guideA1;
+    const surfAt=a=>({x:AX+D.guideR*Math.cos(a),y:AY+D.guideR*Math.sin(a)});
+    const segs=14;
+    for(let i=0;i<segs;i++){
+      const a=a0+(a1-a0)*(i+0.5)/segs,p=surfAt(a);
+      const segLen=D.guideR*Math.abs(a1-a0)/segs*1.12,tan=a+Math.PI/2;
+      g.add(bx(segLen,0.014,chW,MAT.petg,p.x,p.y,0,0,0,tan));
+      g.add(bx(segLen*0.92,0.003,chW-0.01,MAT.white,p.x-0.006*Math.cos(a),p.y-0.006*Math.sin(a),0,0,0,tan));
+      for(const s of [1,-1]) g.add(bx(segLen,wallH,0.012,MAT.petg,p.x,p.y+wallH/2,s*(chW/2),0,0,tan));
+    }
+    parts.guard=g;
+  }
+  // 车架上装：护板+横梁+挡板
+  {
+    const g=new THREE.Group();
+    const AX=BASE_ROLL_X,AY=D.rollZ,beamH=D.beamY;
+    const shroudGeo=new THREE.TorusGeometry(D.shroudR,0.010,8,20,D.shroudSpan);
+    for(const s of [1,-1]){
+      const holder=new THREE.Group();
+      holder.position.set(AX,AY,s*(D.rollL/2+0.006)); holder.rotation.z=D.shroudStart;
+      holder.add(new THREE.Mesh(shroudGeo,MAT.petg)); g.add(holder);
+    }
+    for(let i=0;i<3;i++){
+      const a=D.shroudStart+D.shroudSpan*(i+0.5)/3;
+      g.add(bx(0.012,0.012,D.rollL,MAT.petg,AX+D.shroudR*Math.cos(a),AY+D.shroudR*Math.sin(a),0));
+    }
+    for(const s of [1,-1]) for(const a of [D.shroudStart+0.2,D.shroudStart+D.shroudSpan-0.1]){
+      const sx=AX+D.shroudR*Math.cos(a),sy=AY+D.shroudR*Math.sin(a),railZ=s*(D.bodyW/2-0.030);
+      const postH=Math.max(0.03,sy-D.bodyTop);
+      g.add(bx(0.020,postH,0.020,MAT.extrusion,sx,D.bodyTop+postH/2,railZ));
+    }
+    g.add(bx(0.020,0.020,D.bodyW-0.06,MAT.extrusion,D.beamX,beamH,0));
+    for(const s of [1,-1]){
+      const railZ=s*(D.bodyW/2-0.05);
+      g.add(bx(0.020,beamH-D.bodyTop,0.020,MAT.extrusion,D.beamX,(D.bodyTop+beamH)/2,railZ));
+    }
+    const ddx=D.deflectorX1-D.deflectorX0,ddy=D.deflectorY1-D.deflectorY0;
+    const len=Math.hypot(ddx,ddy),boardAng=Math.atan2(ddy,ddx);
+    const midX=(D.deflectorX0+D.deflectorX1)/2,midY=(D.deflectorY0+D.deflectorY1)/2;
+    const defW=D.rollL*0.80;
+    const armLen=Math.hypot(midX-D.beamX,midY-beamH),armAng=Math.atan2(midY-beamH,midX-D.beamX);
+    for(const s of [1,-1]){
+      const z=s*(defW/2-0.02);
+      g.add(bx(0.022,0.022,0.014,MAT.frame,D.beamX,beamH,z));
+      g.add(bx(armLen,0.014,0.014,MAT.extrusion,(D.beamX+midX)/2,(beamH+midY)/2,z,0,0,armAng));
+      g.add(cy(0.0055,0.036,MAT.metal,midX,midY,z,Math.PI/2,0,0,12));
+    }
+    const deflectorPivot=new THREE.Group();
+    deflectorPivot.position.set(midX,midY,0); g.add(deflectorPivot);
+    deflectorPivot.add(bx(len,D.deflectorT,defW,MAT.def,0,0,0,0,0,boardAng));
+    deflectorPivot.add(bx(len*0.92,0.004,defW*0.9,MAT.rubber,-0.004*Math.sin(boardAng),0.004*Math.cos(boardAng),0,0,0,boardAng));
+    for(const s of [1,-1]) deflectorPivot.add(bx(len,0.036,0.008,MAT.frame,0,-0.010,s*(defW/2+0.006),0,0,boardAng));
+    deflectorRef={pivot:deflectorPivot,midX,midY,boardAng,len};
+    root.add(g); parts.chassisTop=g;
+  }
+  // 摄像头
+  {
+    const g=new THREE.Group();
+    g.add(bx(0.024,D.mh,0.024,MAT.frame,D.beamX,D.beamY+0.014+D.mh/2,0));
+    g.add(bx(0.036,0.028,0.036,MAT.dark,D.beamX+0.010,D.beamY+0.014+D.mh+0.012,0));
+    g.add(cy(0.010,0.012,MAT.glass,D.beamX+0.028,D.beamY+0.014+D.mh+0.012,0,0,0,Math.PI/2));
+    root.add(g); parts.camera=g;
+  }
+  // 后驱通轴
+  {
+    const g=new THREE.Group();
+    const wx=D.wxRear,wy=D.wy,wr=D.wr,ww=D.ww;
+    g.add(cy(0.005,2*wy+0.02,MAT.metal,wx,wr,0,Math.PI/2,0,0,16));
+    for(const s of [1,-1]) g.add(cy(0.014,0.028,MAT.bearing,wx,wr,s*0.12,Math.PI/2,0,0,24));
+    for(const s of [1,-1]){
+      const z=s*wy;
+      g.add(cy(wr,ww,MAT.rubber,wx,wr,z,Math.PI/2,0,0,48));
+      g.add(cy(wr*0.38,ww+0.004,MAT.metal,wx,wr,z,Math.PI/2,0,0));
+      g.add(cy(0.010,ww+0.012,MAT.bearing,wx,wr,z,Math.PI/2,0,0,20));
+      g.add(bx(wr*1.8,0.006,ww+0.020,MAT.petg,wx,wr+wr+0.006,z));
+    }
+    g.add(cy(0.028,0.014,MAT.metal,wx,wr,0,Math.PI/2,0,0,28));
+    const moX=wx+0.045,moY=wr+0.042;
+    g.add(cy(0.024,0.055,MAT.dark,moX,moY,0,Math.PI/2,0,0,32));
+    g.add(cy(0.028,0.028,MAT.metal,moX,moY,0.042,Math.PI/2,0,0,32));
+    g.add(bx(0.040,0.012,0.036,MAT.frame,moX,moY-0.030,0));
+    g.add(cy(0.014,0.012,MAT.metal,moX,moY,0.012,Math.PI/2,0,0,20));
+    {
+      const dx=wx-moX,dy=wr-moY,beltLen=Math.hypot(dx,dy),beltAng=Math.atan2(dy,dx);
+      g.add(bx(beltLen,0.006,0.004,MAT.rubber,(wx+moX)/2,(wr+moY)/2+0.020,0.010,0,0,beltAng));
+      g.add(bx(beltLen,0.006,0.004,MAT.rubber,(wx+moX)/2,(wr+moY)/2-0.020,0.010,0,0,beltAng));
+    }
+    root.add(g); parts.rearDrive=g;
+  }
+  // 前轮中置舵机转向
+  {
+    const g=new THREE.Group();
+    const fwX=D.wxFront,wy=D.wy,wr=D.wr,ww=D.ww;
+    const knuckleY=wr+0.018,armY=wr+0.048,armOut=0.028,servoY=D.bodyZ-0.028;
+    g.add(bx(0.048,0.036,0.040,MAT.dark,fwX+0.010,servoY,0));
+    g.add(cy(0.012,0.008,MAT.metal,fwX+0.010,servoY+0.020,0,0,0,0,16));
+    g.add(bx(0.010,0.008,0.070,MAT.fin,fwX+0.010,servoY+0.024,0.028));
+    const steer={L:null,R:null};
+    for(const s of [1,-1]){
+      const z=s*wy;
+      g.add(bx(0.030,0.014,0.040,MAT.extrusion,fwX,D.bodyZ+0.008,s*(wy-0.055)));
+      g.add(cy(0.008,0.060,MAT.metal,fwX,knuckleY+0.022,z,0,0,0,14));
+      g.add(bx(0.012,0.010,armOut,MAT.frame,fwX,armY,z-s*armOut/2));
+      const sg=new THREE.Group();
+      sg.position.set(fwX,wr,z);
+      sg.add(cy(wr,ww,MAT.rubber,0,0,0,Math.PI/2,0,0,48));
+      sg.add(cy(wr*0.40,ww+0.004,MAT.metal,0,0,0,Math.PI/2,0,0));
+      sg.add(cy(0.012,ww+0.010,MAT.bearing,0,0,0,Math.PI/2,0,0,20));
+      sg.add(bx(wr*1.7,0.006,ww+0.018,MAT.petg,0,wr+0.004,0));
+      g.add(sg); steer[s>0?'L':'R']=sg;
+    }
+    const linkZL=wy-armOut,linkZR=-(wy-armOut);
+    g.add(cy(0.004,Math.abs(linkZL-linkZR)+0.01,MAT.metal,fwX+0.010,armY,0,Math.PI/2,0,0,12));
+    g.userData.steer=steer;
+    root.add(g); parts.steer=g;
+  }
+  // 电池 + 电控
+  {
+    const g=new THREE.Group();
+    const bx0=-0.10,by=D.bodyZ+0.025;
+    g.add(bx(0.15,0.045,0.11,MAT.dark,bx0,by,0));
+    g.add(bx(0.016,0.012,0.014,MAT.estop,bx0+0.080,by+0.005,0));
+    root.add(g); parts.battery=g;
+  }
+  {
+    const g=new THREE.Group();
+    const ex=0.02,ey=D.bodyZ+0.045,ez=0.12;
+    g.add(bx(0.11,0.060,0.048,MAT.petg,ex,ey,ez));
+    g.add(bx(0.114,0.006,0.052,MAT.shell,ex,ey+0.032,ez));
+    g.add(bx(0.060,0.004,0.036,MAT.dark,ex-0.015,ey+0.010,ez));
+    g.add(bx(0.040,0.004,0.022,MAT.frame,ex+0.028,ey+0.010,ez));
+    for(let i=0;i<5;i++) g.add(bx(0.008,0.003,0.030,MAT.metal,ex-0.032+i*0.016,ey+0.020,ez));
+    root.add(g); parts.ecu=g;
+  }
+  // ToF：全部贴装在车架上（横梁中 + 前脸口侧挂板），无悬空件
+  {
+    const g=new THREE.Group();
+    // 正中：摄像头横梁下
+    g.add(bx(0.028,0.016,0.036,MAT.frame,D.beamX,D.beamY-0.012,0));
+    g.add(bx(0.016,0.018,0.028,MAT.dark,D.beamX+0.018,D.beamY-0.012,0));
+    g.add(cy(0.005,0.004,MAT.glass,D.beamX+0.028,D.beamY-0.012,0,0,0,Math.PI/2,12));
+    // 左前/右前：固定在前脸口侧挂板外侧（与车体齐平）
+    for(const s of [1,-1]){
+      const z=s*(D.mouthW/2+0.018);
+      g.add(bx(0.018,0.020,0.014,MAT.frame,D.bodyFront-0.018,0.085,z));
+      g.add(bx(0.012,0.016,0.012,MAT.dark,D.bodyFront-0.004,0.085,z));
+      g.add(cy(0.004,0.003,MAT.glass,D.bodyFront+0.004,0.085,z,0,0,Math.PI/2,10));
+    }
+    root.add(g); parts.tof=g;
+  }
+  // 感知圈
+  const sensor=new THREE.Group();
+  {
+    const rm=new THREE.MeshBasicMaterial({color:0x3dd68c,transparent:true,opacity:0.12,depthWrite:false,side:THREE.DoubleSide});
+    const ring=new THREE.Mesh(new THREE.RingGeometry(0.38,0.42,48),rm);
+    ring.rotation.x=-Math.PI/2; ring.position.y=0.012; sensor.add(ring);
+    const mouth=new THREE.Mesh(new THREE.PlaneGeometry(0.40,0.38),rm.clone());
+    mouth.material.opacity=0.10; mouth.rotation.x=-Math.PI/2; mouth.position.set(0.32,0.012,0); sensor.add(mouth);
+    sensor.visible=false; root.add(sensor);
+  }
+  return {root,parts,rollAxisX,rollAxisY,deflectorRef,rollerPivot,sensor};
+}
+
+/* ═══ 场地 ═══ */
+const COURT={
+  L:23.77,W:10.97,singlesW:8.23,serviceFromNet:6.40,netH:0.914,
+  runBack:6.40,runSide:3.66,fenceH:3.0,fenceMargin:0.50,
+  get fullL(){return this.L+this.runBack*2},
+  get fullW(){return this.W+this.runSide*2},
+  get halfL(){return this.L/2},get halfW(){return this.W/2},
+  get fenceX(){return this.fullL/2},get fenceZ(){return this.fullW/2},
+};
+// 发球机固定在底线（落地区 x=+halfL），不随机器人移动
+const MACHINE={x:COURT.halfL+0.05,z:0,yaw:Math.PI,hopperY:0.78};
+// 起点：发球机旁（底线外侧一点，不挡发射）
+const HOME={x:COURT.halfL+0.9,z:2.2,yaw:Math.PI};
+const COLLECT_XMAX=-0.7;
+const NET_GAP_Z=6.2;
+
+/* ═══ 物理引擎 ═══ */
+const GRAV=9.81;
+const BP={r:BR,restitution:0.72,muRoll:0.35,drag:0.08};
+class BallBody{
+  constructor(x,y,z){
+    this.pos=new THREE.Vector3(x,y,z);
+    this.vel=new THREE.Vector3();
+    this.r=BP.r; this.sleep=false; this.alive=true; this.id=0;
+    this.mesh=null; this.intaking=false; this.inBag=false;
+  }
+}
+function stepBall(b,dt,bounds){
+  if(b.sleep||!b.alive||b.intaking) return;
+  b.vel.y-=GRAV*dt;
+  const sp=b.vel.length();
+  if(sp>0.01) b.vel.multiplyScalar(Math.max(0,1-BP.drag*dt));
+  b.pos.addScaledVector(b.vel,dt);
+  const fy=b.r;
+  if(b.pos.y<fy){
+    b.pos.y=fy;
+    if(b.vel.y<-0.15){
+      b.vel.y=-b.vel.y*BP.restitution;
+      b.vel.x*=0.92; b.vel.z*=0.92;
+    }else{
+      b.vel.y=0;
+      const hv=Math.hypot(b.vel.x,b.vel.z);
+      if(hv>0.02){
+        const dec=BP.muRoll*GRAV*dt, k=Math.max(0,1-dec/hv);
+        b.vel.x*=k; b.vel.z*=k;
+        b.vel.x+=(Math.random()-0.5)*0.02*dt;
+        b.vel.z+=(Math.random()-0.5)*0.02*dt;
+      }else{ b.vel.x=b.vel.z=0; b.sleep=true; }
+    }
+  }
+  const m=b.r+0.02;
+  if(b.pos.x<bounds.minX+m){b.pos.x=bounds.minX+m;b.vel.x=Math.abs(b.vel.x)*0.45}
+  if(b.pos.x>bounds.maxX-m){b.pos.x=bounds.maxX-m;b.vel.x=-Math.abs(b.vel.x)*0.45}
+  if(b.pos.z<bounds.minZ+m){b.pos.z=bounds.minZ+m;b.vel.z=Math.abs(b.vel.z)*0.45}
+  if(b.pos.z>bounds.maxZ-m){b.pos.z=bounds.maxZ-m;b.vel.z=-Math.abs(b.vel.z)*0.45}
+  if(b.pos.y<COURT.netH+b.r*0.5 && Math.abs(b.pos.z)<COURT.halfW+0.2 && Math.abs(b.pos.x)<0.12+b.r){
+    if(b.pos.x>0){b.pos.x=0.12+b.r;b.vel.x=Math.abs(b.vel.x)*0.2}
+    else{b.pos.x=-0.12-b.r;b.vel.x=-Math.abs(b.vel.x)*0.2}
+    b.vel.multiplyScalar(0.5);
+  }
+}
+
+/* ═══ 渲染 ═══ */
+const $=id=>document.getElementById(id);
+const el={
+  picked:$('s-picked'),left:$('s-left'),hopper:$('s-hopper'),time:$('s-time'),
+  stState:$('st-state'),stPhase:$('st-phase'),stTarget:$('st-target'),stMot:$('st-mot'),
+  hudState:$('hud-state'),hudBag:$('hud-bag'),hudLeft:$('hud-left'),hudOdo:$('hud-odo'),
+  log:$('log'),phase:$('phase'),
+  bFire:$('b-fire'),bCollect:$('b-collect'),bPause:$('b-pause'),bReset:$('b-reset'),
+  bFollow:$('b-follow'),bSensor:$('b-sensor'),
+};
+const wrap=$('w');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(wrap.clientWidth,wrap.clientHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+wrap.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0a1218);
+scene.fog=new THREE.Fog(0x0a1218,35,75);
+const camera=new THREE.PerspectiveCamera(40,wrap.clientWidth/wrap.clientHeight,0.05,120);
+camera.position.set(22,14,16);
+const ctrl=new OrbitControls(camera,renderer.domElement);
+ctrl.enableDamping=true; ctrl.target.set(4,0,0);
+ctrl.maxPolarAngle=Math.PI*0.48; ctrl.minDistance=1.5; ctrl.maxDistance=50;
+scene.add(new THREE.AmbientLight(0xb8c8d8,0.55));
+const sun=new THREE.DirectionalLight(0xffffff,1.35);
+sun.position.set(20,26,12); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-22; sun.shadow.camera.right=22; sun.shadow.camera.top=14; sun.shadow.camera.bottom=-14; sun.shadow.camera.far=70;
+scene.add(sun);
+scene.add(new THREE.DirectionalLight(0x88aacc,0.3).translateX(-8));
+
+function courtTexture(){
+  const FL=COURT.fullL,FW=COURT.fullW,w=2048,h=Math.round(2048*FW/FL);
+  const c=document.createElement('canvas'); c.width=w;c.height=h;
+  const g=c.getContext('2d');
+  const mx=x=>((x+FL/2)/FL)*w, mz=z=>((z+FW/2)/FW)*h;
+  g.fillStyle='#3a5c52'; g.fillRect(0,0,w,h);
+  const px0=mx(-COURT.L/2),px1=mx(COURT.L/2),pz0=mz(-COURT.W/2),pz1=mz(COURT.W/2);
+  const grd=g.createLinearGradient(px0,0,px1,0);
+  grd.addColorStop(0,'#1f6b5a'); grd.addColorStop(0.5,'#2a8a70'); grd.addColorStop(1,'#1f6b5a');
+  g.fillStyle=grd; g.fillRect(px0,pz0,px1-px0,pz1-pz0);
+  const line=(x1,z1,x2,z2,lw=3)=>{g.strokeStyle='#f2f5f7';g.lineWidth=lw;g.lineCap='square';g.beginPath();g.moveTo(mx(x1),mz(z1));g.lineTo(mx(x2),mz(z2));g.stroke()};
+  const hw=COURT.halfW,hl=COURT.halfL,hs=COURT.singlesW/2;
+  line(-hl,-hw,hl,-hw,3.5); line(-hl,hw,hl,hw,3.5);
+  line(-hl,-hw,-hl,hw,3.5); line(hl,-hw,hl,hw,3.5);
+  line(-hl,-hs,hl,-hs,2.5); line(-hl,hs,hl,hs,2.5);
+  line(-COURT.serviceFromNet,-hs,-COURT.serviceFromNet,hs,2.5);
+  line(COURT.serviceFromNet,-hs,COURT.serviceFromNet,hs,2.5);
+  line(-COURT.serviceFromNet,0,COURT.serviceFromNet,0,2.5);
+  g.strokeStyle='#e85d04'; g.lineWidth=5;
+  g.strokeRect(mx(HOME.x)-28,mz(HOME.z)-28,56,56);
+  g.fillStyle='rgba(232,93,4,0.18)'; g.fillRect(mx(HOME.x)-28,mz(HOME.z)-28,56,56);
+  const tex=new THREE.CanvasTexture(c);
+  tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=8; return tex;
+}
+const court=new THREE.Mesh(new THREE.PlaneGeometry(COURT.fullL,COURT.fullW),
+  new THREE.MeshStandardMaterial({map:courtTexture(),roughness:0.88,metalness:0.02}));
+court.rotation.x=-Math.PI/2; court.receiveShadow=true; scene.add(court);
+const outer=new THREE.Mesh(new THREE.PlaneGeometry(COURT.fullL+20,COURT.fullW+20),
+  new THREE.MeshStandardMaterial({color:0x14201c,roughness:0.95}));
+outer.rotation.x=-Math.PI/2; outer.position.y=-0.012; outer.receiveShadow=true; scene.add(outer);
+// 网
+{
+  const g=new THREE.Group(),postH=COURT.netH+0.12;
+  const pm=new THREE.MeshStandardMaterial({color:0x22282e,metalness:0.7,roughness:0.35});
+  for(const s of [-1,1]){
+    const p=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.04,postH,12),pm);
+    p.position.set(0,postH/2,s*(COURT.halfW+0.15)); p.castShadow=true; g.add(p);
+  }
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(0.02,COURT.netH,COURT.W+0.3),
+    new THREE.MeshStandardMaterial({color:0x1a1e22,transparent:true,opacity:0.35,roughness:0.9}));
+  mesh.position.y=COURT.netH/2; g.add(mesh);
+  const band=new THREE.Mesh(new THREE.BoxGeometry(0.03,0.05,COURT.W+0.3),
+    new THREE.MeshStandardMaterial({color:0xe8eef4,roughness:0.5}));
+  band.position.y=COURT.netH; g.add(band); scene.add(g);
+}
+// 围网
+{
+  const fx=COURT.fenceX,fz=COURT.fenceZ,fh=COURT.fenceH;
+  const postMat=new THREE.MeshStandardMaterial({color:0x3a424a,metalness:0.75,roughness:0.4});
+  const meshMat=new THREE.MeshStandardMaterial({color:0x2a3340,transparent:true,opacity:0.22,roughness:0.85,side:THREE.DoubleSide,depthWrite:false});
+  const railMat=new THREE.MeshStandardMaterial({color:0x8a949e,metalness:0.8,roughness:0.35});
+  const fence=new THREE.Group(),spacing=3;
+  function postsAlong(len,axis,fixed){
+    const n=Math.max(2,Math.round(len/spacing)+1);
+    for(let i=0;i<n;i++){
+      const t=-len/2+(len*i)/(n-1);
+      const p=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.045,fh,10),postMat);
+      if(axis==='x') p.position.set(t,fh/2,fixed); else p.position.set(fixed,fh/2,t);
+      p.castShadow=true; fence.add(p);
+    }
+  }
+  const spanX=fx*2,spanZ=fz*2;
+  postsAlong(spanX,'x',-fz); postsAlong(spanX,'x',fz);
+  postsAlong(spanZ,'z',-fx); postsAlong(spanZ,'z',fx);
+  function panel(w,d,x,z){
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(Math.max(w,d),fh),meshMat);
+    if(w>=d) m.position.set(x,fh/2,z); else {m.rotation.y=Math.PI/2;m.position.set(x,fh/2,z)}
+    fence.add(m);
+  }
+  panel(spanX-0.1,0,0,-fz+0.02); panel(spanX-0.1,0,0,fz-0.02);
+  panel(0,spanZ-0.1,-fx+0.02,0); panel(0,spanZ-0.1,fx-0.02,0);
+  function rail(len,axis,fixed,y){
+    const geo=axis==='x'?new THREE.BoxGeometry(len,0.04,0.04):new THREE.BoxGeometry(0.04,0.04,len);
+    const m=new THREE.Mesh(geo,railMat);
+    m.position.set(axis==='x'?0:fixed,y,axis==='x'?fixed:0); fence.add(m);
+  }
+  for(const y of [fh,fh*0.55]){
+    rail(spanX,'x',-fz,y); rail(spanX,'x',fz,y);
+    rail(spanZ,'z',-fx,y); rail(spanZ,'z',fx,y);
+  }
+  scene.add(fence);
+}
+const bounds={minX:-COURT.fenceX+COURT.fenceMargin,maxX:COURT.fenceX-COURT.fenceMargin,minZ:-COURT.fenceZ+COURT.fenceMargin,maxZ:COURT.fenceZ-COURT.fenceMargin};
+
+/* ═══ 发球机（固定在底线，不随车） ═══ */
+const machineGroup=new THREE.Group();
+{
+  const M={
+    dark:new THREE.MeshStandardMaterial({color:0x1a1c20,metalness:0.3,roughness:0.5}),
+    metal:new THREE.MeshStandardMaterial({color:0x8a9098,metalness:0.85,roughness:0.3}),
+    accent:new THREE.MeshStandardMaterial({color:0xe85d04,roughness:0.4}),
+    hopper:new THREE.MeshStandardMaterial({color:0x3a4550,metalness:0.2,roughness:0.55}),
+    hopperIn:new THREE.MeshStandardMaterial({color:0xc8e84a,roughness:0.7}),
+    wheel:new THREE.MeshStandardMaterial({color:0x111214,roughness:0.85}),
+    led:new THREE.MeshStandardMaterial({color:0x22d866,emissive:0x11aa44,emissiveIntensity:0.8}),
+    pad:new THREE.MeshStandardMaterial({color:0x2a3038,roughness:0.9}),
+  };
+  // 固定底座垫（强调：场地设施，不随车）
+  const pad=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.02,24),M.pad);
+  pad.position.y=0.01; pad.receiveShadow=true; machineGroup.add(pad);
+  machineGroup.add(bx(0.50,0.08,0.40,M.dark,0,0.05,0));
+  for(const s of [-1,1]){
+    machineGroup.add(cy(0.05,0.03,M.wheel,0.14,0.05,s*0.18,Math.PI/2,0,0,20));
+    machineGroup.add(cy(0.05,0.03,M.wheel,-0.14,0.05,s*0.18,Math.PI/2,0,0,20));
+  }
+  // 立柱
+  machineGroup.add(bx(0.10,0.85,0.10,M.metal,0,0.48,0));
+  // 发射头（对转轮 + 出球管，朝本地 +X = 世界 -X）
+  const head=new THREE.Group();
+  head.position.set(0,MACHINE.hopperY-0.10,0);
+  head.add(cy(0.085,0.12,M.wheel,0.02,0.06,0.07,Math.PI/2,0,0,24));
+  head.add(cy(0.085,0.12,M.wheel,0.02,-0.06,0.07,Math.PI/2,0,0,24));
+  head.add(bx(0.20,0.28,0.26,M.dark,-0.02,0,0.02));
+  head.add(cy(0.040,0.28,M.metal,0.12,0,0,0,0,Math.PI/2,16));
+  head.add(bx(0.04,0.12,0.16,M.accent,0.04,0,0));
+  machineGroup.add(head); machineGroup.userData.head=head;
+  // 大料斗（更醒目）
+  const hop=new THREE.Mesh(new THREE.CylinderGeometry(0.20,0.10,0.28,20),M.hopper);
+  hop.position.set(0,MACHINE.hopperY+0.12,0); hop.castShadow=true; machineGroup.add(hop);
+  machineGroup.add(cy(0.05,0.10,M.accent,0,MACHINE.hopperY+0.30,0,0,0,0,12));
+  machineGroup.add(bx(0.03,0.03,0.03,M.led,0.14,MACHINE.hopperY-0.08,0.12));
+  // 固定铭牌
+  machineGroup.add(bx(0.12,0.04,0.01,M.accent,0,0.18,0.21));
+  machineGroup.position.set(MACHINE.x,0,MACHINE.z);
+  machineGroup.rotation.y=MACHINE.yaw; // 本地 +X → 世界 -X
+  scene.add(machineGroup);
+}
+
+/* ═══ 机器人 ═══ */
+const bot=buildRobot();
+const robot=bot.root;
+scene.add(robot);
+
+/* ═══ 球 ═══ */
+const balls=[], bagVisuals=[];
+const ballGeo=new THREE.SphereGeometry(BR,18,12);
+const matBall=new THREE.MeshStandardMaterial({color:0xc8e84a,roughness:0.62});
+const matBallHot=new THREE.MeshStandardMaterial({color:0xd8f86a,emissive:0x668811,emissiveIntensity:0.45,roughness:0.55});
+const matBallBag=new THREE.MeshStandardMaterial({color:0xb8d84a,roughness:0.7});
+let hopper=60,bag=0;
+const bagCap=30; // 捡满 30 球返航
+
+/* ── 筐内球体物理（局部坐标，挂在 basket 下） ── */
+const bagPhys=[]; // {pos,vel,mesh}
+const BASKET_IN={
+  x0:D.basketX0+0.014+BR,
+  x1:D.basketFront-0.014-BR,
+  zHalf:D.basketW/2-0.014-BR,
+  floor:D.basketZ0+0.012+BR,
+};
+function clearBalls(){
+  for(const b of balls) if(b.mesh) scene.remove(b.mesh);
+  balls.length=0;
+  for(const p of bagPhys){
+    if(p.mesh) bot.parts.basket.remove(p.mesh);
+  }
+  bagPhys.length=0;
+  bagVisuals.length=0;
+}
+function addBagBall(x,y,z,vx,vy,vz){
+  const mesh=new THREE.Mesh(ballGeo,matBallBag);
+  mesh.castShadow=true;
+  mesh.position.set(x,y,z);
+  bot.parts.basket.add(mesh);
+  const p={
+    pos:new THREE.Vector3(x,y,z),
+    vel:new THREE.Vector3(vx||0,vy||0,vz||0),
+    mesh,
+  };
+  bagPhys.push(p);
+  bagVisuals.push(mesh);
+  return p;
+}
+function stepBagPhysics(dt){
+  const g=8.5, rest=0.28, mu=0.82;
+  for(let i=0;i<bagPhys.length;i++){
+    const a=bagPhys[i];
+    a.vel.y-=g*dt;
+    a.vel.multiplyScalar(Math.max(0,1-mu*dt*0.5));
+    a.pos.addScaledVector(a.vel,dt);
+    // 筐底
+    if(a.pos.y<BASKET_IN.floor){
+      a.pos.y=BASKET_IN.floor;
+      if(a.vel.y<0) a.vel.y=-a.vel.y*rest;
+      a.vel.x*=0.75; a.vel.z*=0.75;
+    }
+    // 筐壁
+    if(a.pos.x<BASKET_IN.x0){a.pos.x=BASKET_IN.x0;a.vel.x=Math.abs(a.vel.x)*rest}
+    if(a.pos.x>BASKET_IN.x1){a.pos.x=BASKET_IN.x1;a.vel.x=-Math.abs(a.vel.x)*rest}
+    if(a.pos.z<-BASKET_IN.zHalf){a.pos.z=-BASKET_IN.zHalf;a.vel.z=Math.abs(a.vel.z)*rest}
+    if(a.pos.z>BASKET_IN.zHalf){a.pos.z=BASKET_IN.zHalf;a.vel.z=-Math.abs(a.vel.z)*rest}
+  }
+  // 球-球碰撞（数量少，O(n²) 可接受）
+  const minD=BR*2*0.98;
+  for(let i=0;i<bagPhys.length;i++){
+    for(let j=i+1;j<bagPhys.length;j++){
+      const a=bagPhys[i],b=bagPhys[j];
+      const dx=b.pos.x-a.pos.x,dy=b.pos.y-a.pos.y,dz=b.pos.z-a.pos.z;
+      const d2=dx*dx+dy*dy+dz*dz;
+      if(d2>minD*minD||d2<1e-8) continue;
+      const d=Math.sqrt(d2);
+      const nx=dx/d,ny=dy/d,nz=dz/d;
+      const pen=(minD-d)*0.5;
+      a.pos.x-=nx*pen; a.pos.y-=ny*pen; a.pos.z-=nz*pen;
+      b.pos.x+=nx*pen; b.pos.y+=ny*pen; b.pos.z+=nz*pen;
+      const rvx=b.vel.x-a.vel.x, rvy=b.vel.y-a.vel.y, rvz=b.vel.z-a.vel.z;
+      const vn=rvx*nx+rvy*ny+rvz*nz;
+      if(vn<0){
+        const imp=-vn*0.45;
+        a.vel.x-=nx*imp; a.vel.y-=ny*imp; a.vel.z-=nz*imp;
+        b.vel.x+=nx*imp; b.vel.y+=ny*imp; b.vel.z+=nz*imp;
+      }
+    }
+  }
+  for(const p of bagPhys){
+    if(p.mesh) p.mesh.position.copy(p.pos);
+  }
+}
+function addBallMesh(b){
+  const m=new THREE.Mesh(ballGeo,matBall); m.castShadow=true; m.position.copy(b.pos);
+  scene.add(m); b.mesh=m;
+}
+/** 弹道解算：从 from 以飞行时间 T 落到 to（落地高度=球半径） */
+function ballisticVel(from, to, T){
+  const ty=BR;
+  const vx=(to.x-from.x)/T;
+  const vz=(to.z-from.z)/T;
+  const vy=(ty-from.y+0.5*GRAV*T*T)/T;
+  return new THREE.Vector3(vx,vy,vz);
+}
+function serveBall(){
+  if(hopper<=0) return null;
+  hopper-=1;
+  // 出球点：底线发射管口（世界 -X 方向）
+  const from=new THREE.Vector3(MACHINE.x-0.28,MACHINE.hopperY-0.02,MACHINE.z+(Math.random()-0.5)*0.04);
+  // 约 82% 打到对面半场；约 18% 力道不足（己方半场或网前）
+  const cross=Math.random()<0.82;
+  let tx,tz,T;
+  if(cross){
+    // 对面落地区随机点（略偏中场与底线之间）
+    tx=-(1.0+Math.random()*(COURT.halfL-2.0));
+    tz=(Math.random()*2-1)*(COURT.halfW-0.5);
+    const dist=Math.hypot(tx-from.x,tz-from.z);
+    T=THREE.MathUtils.clamp(0.55+dist*0.038,0.70,1.25);
+  }else{
+    // 短球：落在己方半场或贴网
+    const short=Math.random();
+    if(short<0.55){
+      // 己方半场
+      tx=1.5+Math.random()*(COURT.halfL-3.0);
+      tz=(Math.random()*2-1)*(COURT.halfW-0.8);
+    }else{
+      // 网前（可能撞网）
+      tx=0.3+Math.random()*1.2;
+      tz=(Math.random()*2-1)*(COURT.halfW-1.0);
+    }
+    const dist=Math.hypot(tx-from.x,tz-from.z);
+    T=THREE.MathUtils.clamp(0.45+dist*0.035,0.55,0.95);
+  }
+  const b=new BallBody(from.x,from.y,from.z);
+  b.vel.copy(ballisticVel(from,new THREE.Vector3(tx,0,tz),T));
+  // 轻微扰动，避免落点过假
+  b.vel.x+=(Math.random()-0.5)*0.4;
+  b.vel.z+=(Math.random()-0.5)*0.8;
+  b.vel.y+=(Math.random()-0.5)*0.3;
+  b.id=balls.length+1; b.sleep=false;
+  addBallMesh(b); balls.push(b);
+  return b;
+}
+function aliveBalls(){return balls.filter(b=>b.alive&&!b.inBag&&!b.intaking)}
+/** 地上已停稳的球才响应；滚动中的球忽略 */
+function isSettled(b){
+  if(!b||!b.alive||b.intaking||b.inBag) return false;
+  if(b.sleep) return true;
+  return Math.hypot(b.vel.x,b.vel.z)<0.08 && b.pos.y<=b.r+0.02;
+}
+
+/* ═══ 入筐动画（仅前口） ═══ */
+const ROLL_MIN=D.rollD/2+0.012;
+const PHASE={APPROACH:0,DRAG:1,ARC:2,FLING:3,HIT:4,DROP:5,LAND:6};
+const PHASE_NAME={0:'① 贴地接近',1:'② 轮底拖入',2:'③ 同轴弧上升',3:'③′ 竖直上冲',4:'④ 撞挡板',5:'⑤ 弹入筐',6:'⑥ 已入筐'};
+const animBalls=[];
+function BRIDE(){return (D.rollD/2+D.guideR)/2+0.002}
+function clampOutsideRoller(x,y){
+  const ax=bot.rollAxisX(),ay=bot.rollAxisY(),d=Math.hypot(x-ax,y-ay);
+  if(d>=ROLL_MIN) return {x,y,d};
+  const k=ROLL_MIN/Math.max(1e-6,d);
+  return {x:ax+(x-ax)*k,y:ay+(y-ay)*k,d:ROLL_MIN};
+}
+function guidePoint(a){
+  const R=BRIDE();
+  return clampOutsideRoller(bot.rollAxisX()+R*Math.cos(a),bot.rollAxisY()+R*Math.sin(a));
+}
+function deflectorYAt(x){
+  const def=bot.deflectorRef; if(!def) return null;
+  const {pivot,midX,midY,boardAng,len}=def, rot=pivot.rotation.z;
+  const hx=Math.cos(boardAng)*len/2,hy=Math.sin(boardAng)*len/2;
+  const c=Math.cos(rot),s=Math.sin(rot);
+  const ex=hx*c-hy*s, ey=hx*s+hy*c;
+  const x0=midX-ex,y0=midY-ey,x1=midX+ex,y1=midY+ey;
+  const dxb=x1-x0; if(Math.abs(dxb)<1e-6) return null;
+  const t=(x-x0)/dxb; if(t<-0.02||t>1.02) return null;
+  return y0+(y1-y0)*t;
+}
+/**
+ * 吸入判定：球必须【碰到前滚轮】才卷入
+ * 滚轮轴本地 (rollX, rollZ)≈(0.24, 0.138)，轴向沿 Z
+ * 球心到滚轮轴线距离 < 半径和 + 2.5cm 才算接触
+ */
+function ballInMouthWorld(p){
+  const dx=p.x-botSim.pos.x, dz=p.z-botSim.pos.z;
+  const c=Math.cos(-botSim.yaw), s=Math.sin(-botSim.yaw);
+  const lx=dx*c-dz*s, lz=dx*s+dz*c;
+  const ly=p.y;
+  // 必须在前部进料走廊内
+  if(lx<0.08||lx>0.42) return false;
+  if(Math.abs(lz)>D.mouthW/2) return false;
+  if(ly>0.20) return false;
+  // 与滚轮表面接触（轴线距）
+  const ax=D.rollX, ay=D.rollZ;
+  const distAxis=Math.hypot(lx-ax, ly-ay);
+  const contactR=D.rollD/2+BR+0.025;
+  return distAxis<contactR;
+}
+function startIntake(ball){
+  if(!ball||ball.inBag||ball.intaking) return false;
+  if(!isSettled(ball)) return false; // 滚动中的球不吸入
+  if(!ballInMouthWorld(ball.pos)) return false;
+  ball.intaking=true; ball.sleep=true; ball.alive=false;
+  if(ball.mesh) ball.mesh.material=matBallHot;
+  const p0=guidePoint(D.guideA0);
+  const dx=ball.pos.x-botSim.pos.x, dz=ball.pos.z-botSim.pos.z;
+  const cr=Math.cos(-botSim.yaw), sr=Math.sin(-botSim.yaw);
+  const local={x:dx*cr-dz*sr, z:dx*sr+dz*cr};
+  const ab={
+    ball,mesh:ball.mesh,phase:PHASE.APPROACH,t:0,
+    x0:Math.max(local.x,D.bodyFront+0.18),z0:local.z,
+    xNip:bot.rollAxisX()+ROLL_MIN,
+    xUnder:Math.min(bot.rollAxisX()-0.015,p0.x+0.02),
+    landX:D.basketX0+0.10+Math.random()*0.12,
+    landZ:(Math.random()-0.5)*0.14,
+    landY:D.basketZ0+0.012+BR,
+  };
+  const c=clampOutsideRoller(ab.xUnder,BR); ab.xUnder=c.x;
+  scene.remove(ab.mesh); robot.add(ab.mesh);
+  ab.mesh.position.set(ab.x0,BR,ab.z0);
+  animBalls.push(ab); return true;
+}
+function failIntake(ab,i){
+  const m=ab.mesh;
+  robot.remove(m); scene.add(m);
+  ab.ball.alive=true; ab.ball.intaking=false; ab.ball.sleep=false;
+  ab.ball.pos.copy(robot.localToWorld(new THREE.Vector3(m.position.x,BR,m.position.z)));
+  ab.ball.vel.set(-0.3,0,0); m.material=matBall;
+  animBalls.splice(i,1);
+}
+function updateIntake(dt){
+  const spin=bot.parts.roller?.userData?.spinPivot;
+  if(spin) spin.rotation.z-=dt*6.2;
+  const vIn=0.75,vDrag=0.55,omegaArc=2.8;
+  for(let i=animBalls.length-1;i>=0;i--){
+    const b=animBalls[i],m=b.mesh;
+    el.stPhase.textContent=PHASE_NAME[b.phase]||'—';
+    el.phase.textContent=PHASE_NAME[b.phase]||'';
+    if(b.phase===PHASE.APPROACH){
+      b.t+=dt*vIn;
+      const dist=b.x0-b.xNip, p=Math.min(1,b.t/Math.max(0.01,dist));
+      m.position.x=b.x0+(b.xNip-b.x0)*p; m.position.y=BR; m.position.z=b.z0*(1-p);
+      if(p>=1){b.phase=PHASE.DRAG;b.t=0}
+    }else if(b.phase===PHASE.DRAG){
+      b.t+=dt*vDrag;
+      const dist=Math.max(0.01,b.xNip-b.xUnder),p=Math.min(1,b.t/dist),ease=p*p*(3-2*p);
+      const chk=clampOutsideRoller(b.xNip+(b.xUnder-b.xNip)*ease,BR);
+      m.position.set(chk.x,Math.max(chk.y,BR*0.9),0);
+      if(p>=1){b.phase=PHASE.ARC;b.t=0}
+    }else if(b.phase===PHASE.ARC){
+      b.t+=dt*omegaArc;
+      const k=Math.min(1,b.t/1.2);
+      const a=D.guideA0+(D.guideA1-D.guideA0)*k,s=guidePoint(a);
+      m.position.set(s.x,Math.max(s.y,BR),0);
+      if(k>=1){b.phase=PHASE.FLING;b.t=0;b.fx=m.position.x;b.fy=m.position.y;b.vx=-0.04;b.vy=1.95}
+    }else if(b.phase===PHASE.FLING){
+      b.t+=dt; const g=5,t=b.t;
+      const x=b.fx+b.vx*t, y=b.fy+b.vy*t-0.5*g*t*t;
+      const chk=clampOutsideRoller(x,y);
+      m.position.set(chk.x,chk.y,0);
+      const dy=deflectorYAt(chk.x);
+      if(dy!==null && chk.y+BR>=dy-0.004 && (b.vy-g*t)>0){
+        b.phase=PHASE.HIT;b.t=0;b.hx=chk.x;b.hy=dy-BR;
+      }else if(chk.y<BR) failIntake(b,i);
+    }else if(b.phase===PHASE.HIT){
+      b.t+=dt;
+      if(b.t<0.07){const k=b.t/0.07;m.position.set(b.hx-0.004*k,b.hy,0)}
+      else{b.phase=PHASE.DROP;b.t=0;b.fx=m.position.x;b.fy=m.position.y;b.vx=-1;b.vy=-0.04}
+    }else if(b.phase===PHASE.DROP){
+      b.t+=dt; const g=5.4,t=b.t;
+      m.position.x=b.fx+b.vx*t; m.position.y=b.fy+b.vy*t-0.5*g*t*t; m.position.z=0;
+      if(m.position.y<=b.landY && t>0.05){
+        const inX=m.position.x>D.basketX0+BR*0.5 && m.position.x<D.basketFront-BR*0.3;
+        if(inX){m.position.y=b.landY;b.phase=PHASE.LAND;b.t=0;b.lx=m.position.x;b.lz=0}
+        else if(m.position.y<BR) failIntake(b,i);
+      }
+    }else if(b.phase===PHASE.LAND){
+      b.t+=dt;
+      const k=Math.min(1,b.t/0.28),ease=1-Math.pow(1-k,3);
+      m.position.x=b.lx+(b.landX-b.lx)*ease;
+      m.position.z=b.lz+(b.landZ-b.lz)*ease;
+      m.position.y=b.landY; m.material=matBallBag;
+      if(k>=1){
+        // 交给筐内物理自然堆叠
+        robot.remove(m); scene.remove(m);
+        addBagBall(
+          THREE.MathUtils.clamp(b.landX,BASKET_IN.x0,BASKET_IN.x1),
+          b.landY+0.02,
+          THREE.MathUtils.clamp(b.landZ,-BASKET_IN.zHalf,BASKET_IN.zHalf),
+          (Math.random()-0.5)*0.3, 0.2, (Math.random()-0.5)*0.3
+        );
+        b.ball.inBag=true; bag+=1;
+        animBalls.splice(i,1);
+        log('吸入入筐 #'+b.ball.id+' → '+bag+'/'+bagCap);
+        onBallCollected();
+      }
+    }
+  }
+}
+
+/* ═══ 机器人自主固件：摄像头在前 — 先转正对准，再前进吸入 ═══ */
+const RState={
+  IDLE:'待命',CROSS_OUT:'绕网出站',SCAN:'选最近球',DETOUR:'绕网接近',
+  FACE:'正面对准',APPROACH:'前进接近',ALIGN:'前口微调',
+  INTAKE:'滚轮吸入',SEARCH:'搜索',RETURN:'返航发球机',
+  DUMPING:'倒球入发球机',DONE:'任务完成',
+};
+const botSim={
+  running:false,paused:false,state:RState.IDLE,t:0,odo:0,
+  pos:new THREE.Vector3(HOME.x,0,HOME.z),yaw:HOME.yaw,v:0,steer:0,
+  target:null,path:[],pathI:0,intakeWait:0,scanT:0,scanFrom:0,
+};
+const vmax=1.15,vCollect=0.70,steerMax=30*Math.PI/180,wheelBase=D.wxFront-D.wxRear;
+// 摄像头水平视场（前方扇区）
+const CAM_FOV=THREE.MathUtils.degToRad(100);
+
+function log(msg){
+  const t=botSim.t.toFixed(1);
+  const div=document.createElement('div');
+  div.innerHTML='<span class="t">'+t+'s</span>'+msg;
+  el.log.prepend(div);
+  while(el.log.children.length>40) el.log.removeChild(el.log.lastChild);
+}
+function setRState(s){
+  if(botSim.state===s) return;
+  botSim.state=s;
+  const idle=s===RState.IDLE||s===RState.DONE;
+  el.stState.textContent=s;
+  el.stState.className='badge '+(idle?'idle':(s===RState.INTAKE||s===RState.RETURN||s===RState.SCAN||s===RState.DUMPING?'warn':''));
+  el.hudState.textContent=s;
+  log('状态 → '+s);
+}
+function angDiff(a,b){let d=a-b;while(d>Math.PI)d-=Math.PI*2;while(d<=-Math.PI)d+=Math.PI*2;return d}
+
+/* ── 球网障碍（硬约束，不能穿过） ── */
+const NET={
+  x:0,
+  halfSpan:COURT.halfW+0.35, // 含网柱
+  thickness:0.40,            // 车体半宽+余量
+};
+/** 点是否撞网 */
+function posHitsNet(x,z){
+  return Math.abs(x)<NET.thickness && Math.abs(z)<NET.halfSpan;
+}
+/** 线段是否穿过网面 */
+function lineHitsNet(x0,z0,x1,z1){
+  if((x0>0)===(x1>0)) return false; // 同侧
+  const t=x0/(x0-x1+1e-9);
+  if(t<0||t>1) return false;
+  const z=z0+t*(z1-z0);
+  return Math.abs(z)<NET.halfSpan;
+}
+/** 含围网+球网的位姿钳制 */
+function clampPos(x,z){
+  let nx=THREE.MathUtils.clamp(x,bounds.minX+0.25,bounds.maxX-0.25);
+  let nz=THREE.MathUtils.clamp(z,bounds.minZ+0.25,bounds.maxZ-0.25);
+  // 球网：禁止进入网带；若从一侧压到另一侧则挡在本侧
+  if(posHitsNet(nx,nz)){
+    // 推回靠近的本侧
+    if(botSim.pos.x>=0) nx=Math.max(nx,NET.thickness);
+    else nx=Math.min(nx,-NET.thickness);
+    if(posHitsNet(nx,nz)) nz=THREE.MathUtils.clamp(nz,-NET.halfSpan+0.1,NET.halfSpan-0.1);
+    if(posHitsNet(nx,nz)) nx=botSim.pos.x>=0?NET.thickness:-NET.thickness;
+  }
+  return {x:nx,z:nz};
+}
+/** 从 (x0,z0) 到 (x1,z1) 的移动若穿网则拒绝，返回修正后位置 */
+function blockNetMove(x0,z0,x1,z1){
+  if(!lineHitsNet(x0,z0,x1,z1)) return {x:x1,z:z1};
+  // 停在网前
+  const side=x0>=0?1:-1;
+  return {x:side*NET.thickness, z:z1};
+}
+
+/** 球是否在摄像头前方扇区内 */
+function ballInCamera(ball){
+  const dx=ball.pos.x-botSim.pos.x, dz=ball.pos.z-botSim.pos.z;
+  const bearing=Math.atan2(dz,dx);
+  const err=Math.abs(angDiff(bearing,botSim.yaw));
+  return err<CAM_FOV/2;
+}
+function ballBearing(ball){
+  return Math.atan2(ball.pos.z-botSim.pos.z, ball.pos.x-botSim.pos.x);
+}
+/**
+ * 捡球顺序：先对面半场清完，再本方半场，最后返航
+ * 最近优先（同半场内）
+ */
+const collectPhase={opposite:true};
+function resetCollectPhase(){ collectPhase.opposite=true; }
+function pickTarget(){
+  let best=null,bd=Infinity;
+  const wantOpp=collectPhase.opposite;
+  for(const b of aliveBalls()){
+    if(!isSettled(b)) continue; // 只盯停稳的球
+    if(Math.hypot(b.pos.x-MACHINE.x,b.pos.z-MACHINE.z)<0.55) continue;
+    const isOpp=b.pos.x<=COLLECT_XMAX;
+    if(wantOpp&&!isOpp) continue;
+    if(!wantOpp&&isOpp) continue;
+    const d=Math.hypot(b.pos.x-botSim.pos.x,b.pos.z-botSim.pos.z);
+    if(d<bd){bd=d;best=b}
+  }
+  if(best) return best;
+  // 对面已无球（含滚动中）→ 才切到本方；仅无“停稳球”则等待
+  if(wantOpp){
+    const anyOppAlive=aliveBalls().some(b=>
+      b.pos.x<=COLLECT_XMAX &&
+      Math.hypot(b.pos.x-MACHINE.x,b.pos.z-MACHINE.z)>=0.55
+    );
+    if(!anyOppAlive){
+      const anySettled=aliveBalls().some(b=>isSettled(b));
+      if(anySettled){
+        collectPhase.opposite=false;
+        log('对面半场已清完 · 改捡本方半场');
+        return pickTarget();
+      }
+    }
+  }
+  return null;
+}
+/** 目标是否与车隔网 */
+function needDetourTo(tx,tz){
+  return lineHitsNet(botSim.pos.x,botSim.pos.z,tx,tz);
+}
+/** 生成绕网球路径：侧向出网柱再进对面 */
+function pathAroundNetTo(tx,tz){
+  const side=botSim.pos.z>=0?1:-1;
+  const pts=[];
+  // 1. 先退开到侧向
+  pts.push(new THREE.Vector3(botSim.pos.x,0,side*Math.min(Math.abs(botSim.pos.z)+1.2,NET_GAP_Z-0.6)));
+  // 2. 到网柱外
+  pts.push(new THREE.Vector3(Math.sign(botSim.pos.x||1)*1.5,0,side*NET_GAP_Z));
+  // 3. 过网侧
+  pts.push(new THREE.Vector3(-Math.sign(botSim.pos.x||1)*1.5,0,side*NET_GAP_Z));
+  // 4. 靠近目标侧向
+  pts.push(new THREE.Vector3(tx,0,side*Math.min(Math.abs(tz)+0.8,NET_GAP_Z-0.8)));
+  // 5. 目标前方停靠点
+  pts.push(new THREE.Vector3(tx,0,tz));
+  return pts;
+}
+/**
+ * 出站路径：起点朝场内（-X），必须先正向前进，再侧向绕网
+ */
+function pathToCollectHalf(){
+  const side=botSim.pos.z>=0?1:-1;
+  const hx=botSim.pos.x, hz=botSim.pos.z;
+  return[
+    new THREE.Vector3(hx-3.0, 0, hz),
+    new THREE.Vector3(COURT.halfL-2.0, 0, side*(NET_GAP_Z-0.4)),
+    new THREE.Vector3(0.5, 0, side*NET_GAP_Z),
+    new THREE.Vector3(-3.2, 0, side*(NET_GAP_Z-1.2)),
+    new THREE.Vector3(-5.5, 0, side*2.8),
+  ];
+}
+function pathHome(){
+  const side=botSim.pos.z>=0?1:-1;
+  const px=botSim.pos.x, pz=botSim.pos.z;
+  return[
+    new THREE.Vector3(px, 0, side*Math.min(Math.abs(pz)+1.0, NET_GAP_Z-0.5)),
+    new THREE.Vector3(-2.0, 0, side*NET_GAP_Z),
+    new THREE.Vector3(3.0, 0, side*NET_GAP_Z),
+    new THREE.Vector3(HOME.x-2.2, 0, HOME.z),
+    new THREE.Vector3(HOME.x, 0, HOME.z),
+  ];
+}
+
+/** 原地转向到指定朝向；到位返回 true。转向中速度强制为 0 */
+function turnToFace(yawDes,dt,tol){
+  const err=angDiff(yawDes,botSim.yaw);
+  tol=tol==null?0.10:tol;
+  botSim.v=0;
+  if(Math.abs(err)<=tol){
+    botSim.steer=0;
+    return true;
+  }
+  botSim.steer=THREE.MathUtils.clamp(err*3.0,-steerMax,steerMax);
+  const omega=THREE.MathUtils.clamp(err*4.2,-3.2,3.2);
+  botSim.yaw+=omega*dt;
+  return false;
+}
+
+/**
+ * 只前进。硬约束：车头与目标方位偏差 > 0.16rad（约9°）时
+ * 一律先原地转正，禁止斜着开、禁止倒着开。
+ */
+function driveForward(tx,tz,vDes,dt){
+  const dx=tx-botSim.pos.x,dz=tz-botSim.pos.z,dist=Math.hypot(dx,dz);
+  if(dist<0.05) return 0;
+  const desiredYaw=Math.atan2(dz,dx);
+  const err=angDiff(desiredYaw,botSim.yaw);
+  const absErr=Math.abs(err);
+
+  // 未正对：只转不开
+  if(absErr>0.16){
+    turnToFace(desiredYaw,dt,0.10);
+    return dist;
+  }
+
+  botSim.steer=THREE.MathUtils.clamp(err*2.2,-steerMax,steerMax);
+  const omega=(Math.abs(botSim.v)>0.10)
+    ? (botSim.v/wheelBase)*Math.tan(botSim.steer)
+    : THREE.MathUtils.clamp(err*2.5,-1.5,1.5);
+
+  let vCmd=vDes;
+  if(dist<0.40) vCmd*=THREE.MathUtils.clamp(dist/0.40,0.15,1);
+  if(absErr>0.08) vCmd*=0.55; // 仍有小偏差则减速修正
+
+  const dv=vCmd-botSim.v, a=dv>0?1.8:3.5;
+  botSim.v+=THREE.MathUtils.clamp(dv,-a*dt,a*dt);
+  if(botSim.v<0) botSim.v=0;
+
+  botSim.yaw+=omega*dt;
+  const rawX=botSim.pos.x+Math.cos(botSim.yaw)*botSim.v*dt;
+  const rawZ=botSim.pos.z+Math.sin(botSim.yaw)*botSim.v*dt;
+  // 球网硬阻挡：穿网则停在网前
+  const blocked=blockNetMove(botSim.pos.x,botSim.pos.z,rawX,rawZ);
+  const cl=clampPos(blocked.x,blocked.z);
+  // 若被网挡住则立刻刹停
+  if(blocked.x!==rawX||blocked.z!==rawZ) botSim.v=0;
+  botSim.odo+=Math.hypot(cl.x-botSim.pos.x,cl.z-botSim.pos.z);
+  botSim.pos.x=cl.x; botSim.pos.z=cl.z;
+  return dist;
+}
+
+/** 路径跟踪：每个路点都必须先转正再前进 */
+function followPath(dt,vDes){
+  if(botSim.pathI>=botSim.path.length) return true;
+  const wp=botSim.path[botSim.pathI];
+  const dx=wp.x-botSim.pos.x,dz=wp.z-botSim.pos.z;
+  const dist=Math.hypot(dx,dz);
+  if(dist<0.35){
+    botSim.pathI++;
+    return botSim.pathI>=botSim.path.length;
+  }
+  const desiredYaw=Math.atan2(dz,dx);
+  const absErr=Math.abs(angDiff(desiredYaw,botSim.yaw));
+  if(absErr>0.16){
+    // 先转正，速度为 0
+    turnToFace(desiredYaw,dt,0.10);
+    return false;
+  }
+  driveForward(wp.x,wp.z,vDes,dt);
+  return false;
+}
+
+function syncRobotMesh(){
+  robot.position.set(botSim.pos.x,0,botSim.pos.z);
+  // Three.js rotation.y=θ 将本地+X映射到 (cosθ, -sinθ)
+  // 运动方向用 (cos yaw, sin yaw)，故网格朝向取 -yaw 才能与位移一致
+  robot.rotation.y=-botSim.yaw;
+  const sg=bot.parts.steer?.userData?.steer;
+  if(sg){ if(sg.L) sg.L.rotation.y=botSim.steer; if(sg.R) sg.R.rotation.y=botSim.steer; }
+}
+
+function botFirmware(dt){
+  if(!botSim.running||botSim.paused) return;
+  botSim.t+=dt;
+
+  if(botSim.state===RState.DONE||botSim.state===RState.IDLE){
+    botSim.v=0; syncRobotMesh(); return;
+  }
+
+  if(botSim.state===RState.CROSS_OUT){
+    if(followPath(dt,vmax)){
+      setRState(RState.SEARCH);
+      el.phase.textContent='到位 · 选最近球';
+    }
+  }
+  else if(botSim.state===RState.SCAN){
+    // 短暂停留后直接选最近球（最近优先，不再“看见哪个捡哪个”）
+    botSim.v=0;
+    botSim.scanT+=dt;
+    const seen=pickTarget();
+    if(seen){
+      botSim.target=seen;
+      log('最近目标 #'+seen.id+' 距 '+Math.hypot(seen.pos.x-botSim.pos.x,seen.pos.z-botSim.pos.z).toFixed(1)+'m');
+      setRState(RState.FACE);
+      el.phase.textContent='锁定最近球 · 正面对准';
+    }else if(aliveBalls().length===0&&hopper===0&&animBalls.length===0){
+      setRState(RState.RETURN); botSim.path=pathHome(); botSim.pathI=0; log('清场 · 返航');
+    }else if(aliveBalls().length===0){
+      botSim.scanT=0; // 等发球
+    }
+  }
+  else if(botSim.state===RState.SEARCH){
+    // 最近优先：选全场最近球；隔网则绕行
+    botSim.target=pickTarget();
+    if(botSim.target){
+      const b=botSim.target;
+      const dist=Math.hypot(b.pos.x-botSim.pos.x,b.pos.z-botSim.pos.z);
+      log('最近目标 #'+b.id+' · '+dist.toFixed(1)+'m');
+      if(needDetourTo(b.pos.x,b.pos.z)){
+        botSim.path=pathAroundNetTo(b.pos.x,b.pos.z);
+        botSim.pathI=0;
+        setRState(RState.DETOUR);
+        el.phase.textContent='隔网 · 绕网接近';
+        log('目标在网对面 · 绕行');
+      }else{
+        setRState(RState.FACE);
+        el.phase.textContent='正面对准最近球';
+      }
+    }
+    else if(aliveBalls().length===0&&hopper===0&&animBalls.length===0){
+      setRState(RState.RETURN); botSim.path=pathHome(); botSim.pathI=0; log('清场 · 返航');
+    }else if(aliveBalls().length===0&&hopper===0){
+      setRState(RState.RETURN); botSim.path=pathHome(); botSim.pathI=0;
+    }else{
+      setRState(RState.SCAN); botSim.scanT=0;
+    }
+  }
+  else if(botSim.state===RState.DETOUR){
+    // 绕网路径跟踪，全程遵守先转正再前进 + 不穿网
+    if(followPath(dt,vmax*0.85)){
+      // 绕到位后对准球
+      if(botSim.target&&botSim.target.alive){
+        setRState(RState.FACE);
+        el.phase.textContent='已绕网 · 正面对准';
+      }else{
+        setRState(RState.SEARCH);
+      }
+    }
+  }
+  else if(botSim.state===RState.FACE){
+    if(!botSim.target||!botSim.target.alive||botSim.target.inBag){
+      setRState(RState.SEARCH); syncRobotMesh(); return;
+    }
+    const b=botSim.target;
+    // 若又隔网（球被碰过）→ 再绕
+    if(needDetourTo(b.pos.x,b.pos.z)){
+      botSim.path=pathAroundNetTo(b.pos.x,b.pos.z);
+      botSim.pathI=0;
+      setRState(RState.DETOUR);
+      syncRobotMesh(); return;
+    }
+    const yawTo=ballBearing(b);
+    if(turnToFace(yawTo,dt,0.10)){
+      setRState(RState.APPROACH);
+      el.phase.textContent='已正对 · 前进接近';
+    }
+  }
+  else if(botSim.state===RState.APPROACH){
+    if(!botSim.target||!botSim.target.alive||botSim.target.inBag){
+      setRState(RState.SEARCH); syncRobotMesh(); return;
+    }
+    const b=botSim.target;
+    // 有更近的新球出现 → 换目标（最近优先）
+    const nearer=pickTarget();
+    if(nearer&&nearer!==b){
+      const dNew=Math.hypot(nearer.pos.x-botSim.pos.x,nearer.pos.z-botSim.pos.z);
+      const dOld=Math.hypot(b.pos.x-botSim.pos.x,b.pos.z-botSim.pos.z);
+      if(dNew+0.4<dOld){
+        botSim.target=nearer;
+        log('发现更近球 · 改目标 #'+nearer.id);
+        setRState(RState.FACE);
+        syncRobotMesh(); return;
+      }
+    }
+    // 隔网则绕
+    if(needDetourTo(b.pos.x,b.pos.z)){
+      botSim.path=pathAroundNetTo(b.pos.x,b.pos.z);
+      botSim.pathI=0;
+      setRState(RState.DETOUR);
+      syncRobotMesh(); return;
+    }
+    const yawTo=ballBearing(b);
+    const absErr=Math.abs(angDiff(yawTo,botSim.yaw));
+    if(absErr>0.16){
+      turnToFace(yawTo,dt,0.10);
+    }else{
+      // 行进中接近：不停车，开过去吸入
+      driveForward(b.pos.x,b.pos.z,vCollect,dt);
+    }
+    // 只要进入前口就开始吸入，车继续走
+    if(ballInMouthWorld(b.pos)){
+      if(startIntake(b)){
+        log('行进吸入 #'+b.id);
+        // 不进入停车状态，继续 SEARCH/APPROACH 捡下一颗
+        botSim.target=pickTarget();
+        if(botSim.target){
+          if(needDetourTo(botSim.target.pos.x,botSim.target.pos.z)){
+            botSim.path=pathAroundNetTo(botSim.target.pos.x,botSim.target.pos.z);
+            botSim.pathI=0; setRState(RState.DETOUR);
+          }else setRState(RState.FACE);
+        }else setRState(RState.SEARCH);
+      }
+    }
+  }
+  else if(botSim.state===RState.ALIGN){
+    if(!botSim.target||!botSim.target.alive){setRState(RState.SEARCH);syncRobotMesh();return}
+    const b=botSim.target;
+    const yawTo=ballBearing(b);
+    if(Math.abs(angDiff(yawTo,botSim.yaw))>0.12) turnToFace(yawTo,dt,0.08);
+    else driveForward(b.pos.x,b.pos.z,vCollect,dt);
+    if(ballInMouthWorld(b.pos)&&startIntake(b)){
+      log('行进吸入 #'+b.id);
+      setRState(RState.SEARCH);
+    }
+    botSim.intakeWait+=dt;
+    if(botSim.intakeWait>2.5){
+      log('未吸入 · 换目标');
+      setRState(RState.SEARCH); botSim.intakeWait=0;
+    }
+  }
+  else if(botSim.state===RState.INTAKE){
+    // 兼容：吸入动画进行中仍可继续开（动画在车体本地坐标）
+    if(animBalls.length===0){
+      if(bag>=bagCap||(aliveBalls().length===0&&hopper===0)){
+        setRState(RState.RETURN); botSim.path=pathHome(); botSim.pathI=0;
+      }else{
+        setRState(RState.SEARCH);
+      }
+    }
+  }
+  else if(botSim.state===RState.RETURN){
+    const distHome=Math.hypot(botSim.pos.x-HOME.x,botSim.pos.z-HOME.z);
+    // 已到家附近：直接倒球，不再等路径/转向收尾
+    if(distHome<0.55){
+      botSim.v=0;
+      botSim.pos.set(HOME.x,0,HOME.z);
+      botSim.yaw=HOME.yaw;
+      syncRobotMesh();
+      const nDump=bag>0?bag:bagPhys.length;
+      if(nDump>0){
+        bag=nDump;
+        startDump();
+        setRState(RState.DUMPING);
+        log('到家 · 倒球入发球机（'+bag+' 球 → 料斗）');
+        el.phase.textContent='倒球入发球机…';
+      }else{
+        setRState(RState.DONE);
+        log('回到发球机旁 · 用时 '+botSim.t.toFixed(1)+'s');
+        el.bCollect.textContent='任务完成';
+        botSim.running=false;
+      }
+      return;
+    }
+    // 返航路径跟踪（到家前）
+    followPath(dt,vmax*0.85);
+    // 路径走完但仍离家较远：直接朝家开
+    if(botSim.pathI>=botSim.path.length){
+      driveForward(HOME.x,HOME.z,vmax*0.85,dt);
+    }
+  }
+  else if(botSim.state===RState.DUMPING){
+    botSim.v=0;
+    const dumpDone=updateDump(dt);
+    if(dumpDone){
+      log('倒球完成 · 料斗 '+hopper+' · 用时 '+botSim.t.toFixed(1)+'s · 里程 '+botSim.odo.toFixed(1)+'m');
+      if(aliveBalls().length>0){
+        resetCollectPhase();
+        setRState(RState.CROSS_OUT);
+        botSim.path=pathToCollectHalf();
+        botSim.pathI=0;
+        el.phase.textContent='倒球完成 · 再次出站捡球';
+        log('场上仍有 '+aliveBalls().length+' 球 · 再次出站');
+        el.bCollect.textContent='捡球中…';
+      }else{
+        setRState(RState.DONE);
+        el.phase.textContent='任务完成 · 球已倒回发球机';
+        el.bCollect.textContent='任务完成';
+        botSim.running=false;
+      }
+    }
+  }
+  syncRobotMesh();
+}
+
+/* ═══ 倒球入发球机（满筐回起点后） ═══ */
+const dumpAnim={active:false,t:0,items:[]};
+function startDump(){
+  dumpAnim.active=true; dumpAnim.t=0; dumpAnim.items=[];
+  // 筐世界坐标（倒出口）
+  const from=new THREE.Vector3(D.basketCx+0.05,D.basketZ0+D.basketH*0.6,0);
+  robot.localToWorld(from);
+  const to=new THREE.Vector3(MACHINE.x,MACHINE.hopperY+0.18,MACHINE.z);
+  // 筐内物理球隐藏，改用飞行动画
+  for(const p of bagPhys){ if(p.mesh) p.mesh.visible=false; }
+  const n=bag;
+  for(let i=0;i<n;i++){
+    dumpAnim.items.push({
+      delay:i*0.035,
+      t:0,
+      mesh:null,
+      from:from.clone().add(new THREE.Vector3(
+        (Math.random()-0.5)*0.12, Math.random()*0.04, (Math.random()-0.5)*0.16
+      )),
+      to:to.clone().add(new THREE.Vector3((Math.random()-0.5)*0.06,0,(Math.random()-0.5)*0.06)),
+      done:false,
+    });
+  }
+}
+function updateDump(dt){
+  if(!dumpAnim.active){
+    // 无动画可播视为已完成（防御：避免卡死）
+    return dumpAnim.items.length===0;
+  }
+  dumpAnim.t+=dt;
+  let pending=0;
+  for(const it of dumpAnim.items){
+    if(it.done) continue;
+    pending++;
+    if(dumpAnim.t<it.delay) continue;
+    it.t+=dt;
+    if(!it.mesh){
+      it.mesh=new THREE.Mesh(ballGeo,matBallBag);
+      it.mesh.castShadow=true;
+      scene.add(it.mesh);
+      it.mesh.position.copy(it.from);
+    }
+    const k=Math.min(1,it.t/0.42);
+    it.mesh.position.lerpVectors(it.from,it.to,k);
+    it.mesh.position.y=it.from.y+(it.to.y-it.from.y)*k+Math.sin(k*Math.PI)*0.40;
+    if(k>=1){
+      scene.remove(it.mesh);
+      it.mesh=null; it.done=true;
+      hopper+=1;
+      bag=Math.max(0,bag-1);
+      pending--;
+    }
+  }
+  if(pending<=0){
+    dumpAnim.active=false;
+    for(const p of bagPhys){ if(p.mesh) bot.parts.basket.remove(p.mesh); }
+    bagPhys.length=0; bagVisuals.length=0;
+    bag=0;
+    return true;
+  }
+  return false;
+}
+function cancelDump(){
+  dumpAnim.active=false;
+  for(const it of dumpAnim.items){
+    if(it.mesh){ scene.remove(it.mesh); it.mesh=null; }
+  }
+  dumpAnim.items.length=0;
+}
+
+function onBallCollected(){
+  if(bag>=bagCap&&botSim.running){
+    setRState(RState.RETURN); botSim.path=pathHome(); botSim.pathI=0; log('筐满 · 返航');
+  }
+}
+
+/* ═══ 底盘撞球：侧面/后面把球推开，禁止钻入车底（离地仅35mm≪球径） ═══ */
+const CHASSIS_HIT={
+  x0:D.bodyX0-0.03,   // 车尾（含缓冲）
+  x1:D.bodyFront+0.02,// 车头
+  zHalf:D.bodyW/2+0.03,
+};
+function collideBallWithChassis(b){
+  if(!b.alive||b.intaking||b.inBag) return;
+  const dx=b.pos.x-botSim.pos.x, dz=b.pos.z-botSim.pos.z;
+  const cr=Math.cos(-botSim.yaw), sr=Math.sin(-botSim.yaw);
+  const local={x:dx*cr-dz*sr, z:dx*sr+dz*cr};
+  // 前滚轮吸入走廊：不推开，交给吸入判定
+  if(local.x>0.06 && local.x<0.55 && Math.abs(local.z)<D.mouthW/2+0.04) return;
+  const r=b.r+0.012;
+  const x0=CHASSIS_HIT.x0-r, x1=CHASSIS_HIT.x1+r, zh=CHASSIS_HIT.zHalf+r;
+  if(local.x<x0||local.x>x1||Math.abs(local.z)>zh) return;
+
+  const penRear=local.x-x0;
+  const penFront=x1-local.x;
+  const penSide=zh-Math.abs(local.z);
+  let lx=0,lz=0,pen=0;
+  if(penSide<=penRear&&penSide<=penFront){
+    pen=penSide; lz=(local.z>=0?1:-1)*pen;
+  }else if(penRear<=penFront){
+    pen=penRear; lx=-pen;
+  }else{
+    pen=penFront; lx=pen;
+  }
+  const c=Math.cos(botSim.yaw),s=Math.sin(botSim.yaw);
+  const wx=lx*c-lz*s, wz=lx*s+lz*c;
+  b.pos.x+=wx; b.pos.z+=wz;
+  const kick=0.9+botSim.v*1.2;
+  const n=Math.hypot(wx,wz)||1;
+  b.vel.x+=(wx/n)*kick;
+  b.vel.z+=(wz/n)*kick;
+  b.vel.y=Math.max(b.vel.y,0.4);
+  b.sleep=false;
+}
+
+/* ═══ 发球控制 ═══ */
+let firing=false,fireTimer=0,followOn=true;
+function updateMachine(dt){
+  const head=machineGroup.userData.head;
+  if(head&&firing) head.rotation.x=Math.sin(botSim.t*20)*0.02;
+  if(!firing) return;
+  fireTimer-=dt;
+  if(fireTimer<=0){
+    if(hopper>0){ serveBall(); fireTimer=5.0; el.phase.textContent='发球中 · 余弹 '+hopper; }
+    else{ firing=false; el.bFire.textContent='发球完成'; log('发球机空仓'); }
+  }
+}
+function updateHUD(){
+  const left=aliveBalls().length;
+  el.picked.textContent=bag; el.left.textContent=left; el.hopper.textContent=hopper;
+  el.time.textContent=botSim.t.toFixed(1);
+  el.hudBag.textContent=bag+' / '+bagCap; el.hudLeft.textContent=String(left);
+  el.hudOdo.textContent=botSim.odo.toFixed(1)+' m';
+  el.stMot.textContent=botSim.v.toFixed(2)+' m/s · '+(botSim.steer*180/Math.PI).toFixed(0)+'°';
+  if(botSim.target&&botSim.target.alive) el.stTarget.textContent='#'+botSim.target.id;
+  else if(botSim.state===RState.RETURN||botSim.state===RState.DONE||botSim.state===RState.DUMPING) el.stTarget.textContent='发球机旁';
+  else el.stTarget.textContent='—';
+}
+function resetAll(){
+  firing=false; fireTimer=0; hopper=60; bag=0;
+  clearBalls();
+  cancelDump();
+  resetCollectPhase();
+  for(const ab of animBalls.splice(0)){ if(ab.mesh){robot.remove(ab.mesh);scene.remove(ab.mesh)} }
+  botSim.running=false; botSim.paused=false; botSim.state=RState.IDLE;
+  botSim.t=0; botSim.odo=0;
+  botSim.pos.set(HOME.x,0,HOME.z); botSim.yaw=HOME.yaw;
+  botSim.v=0; botSim.steer=0; botSim.target=null; botSim.path=[]; botSim.pathI=0;
+  bot.deflectorRef.pivot.rotation.z=0;
+  syncRobotMesh(); setRState(RState.IDLE);
+  el.bFire.textContent='开始发球'; el.bCollect.textContent='开始捡球';
+  el.bPause.textContent='暂停'; el.bPause.classList.remove('on');
+  el.stPhase.textContent='—'; el.phase.textContent='物理引擎待命 · 点击开始发球';
+  el.log.innerHTML=''; log('已重置 · 发球机 60 球 · 筐容量 30 · 满筐倒回料斗'); updateHUD();
+}
+
+el.bFire.onclick=()=>{ if(hopper<=0)return; firing=true; el.bFire.textContent='发球中…'; log('开始发球'); el.phase.textContent='发球中…'; };
+el.bCollect.onclick=()=>{
+  if(botSim.state===RState.DONE){log('任务已完成 · 请先重置');return}
+  if(botSim.running&&!botSim.paused) return;
+  botSim.running=true; botSim.paused=false;
+  el.bCollect.textContent='捡球中…'; el.bPause.textContent='暂停'; el.bPause.classList.remove('on');
+  log('开始捡球（自主程序）');
+  if(botSim.state===RState.IDLE){
+    setRState(RState.CROSS_OUT); botSim.path=pathToCollectHalf(); botSim.pathI=0;
+    el.phase.textContent='自主程序：绕网前往对面半场';
+  }
+};
+el.bPause.onclick=()=>{
+  botSim.paused=!botSim.paused;
+  el.bPause.textContent=botSim.paused?'继续':'暂停';
+  el.bPause.classList.toggle('on',botSim.paused);
+  log(botSim.paused?'暂停':'继续');
+};
+el.bReset.onclick=resetAll;
+el.bFollow.onclick=()=>{
+  followOn=!followOn;
+  el.bFollow.classList.toggle('on',followOn);
+  log(followOn?'跟随中 · 焦点锁定小车，仍可拖拽/缩放':'关闭跟随 · 单击场景改焦点');
+};
+el.bSensor.onclick=()=>{bot.sensor.visible=!bot.sensor.visible;el.bSensor.classList.toggle('on',bot.sensor.visible)};
+
+// 点击场景：把观察焦点设到点击处（球/场地/机器人）
+const raycaster=new THREE.Raycaster();
+const pointer=new THREE.Vector2();
+let downXY=null;
+renderer.domElement.addEventListener('pointerdown',e=>{downXY={x:e.clientX,y:e.clientY}});
+renderer.domElement.addEventListener('pointerup',e=>{
+  if(!downXY) return;
+  const moved=Math.hypot(e.clientX-downXY.x,e.clientY-downXY.y);
+  downXY=null;
+  if(moved>6) return; // 拖拽旋转，不改焦点
+  if(followOn) return; // 跟随模式不抢焦点
+  const rect=renderer.domElement.getBoundingClientRect();
+  pointer.x=((e.clientX-rect.left)/rect.width)*2-1;
+  pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(pointer,camera);
+  const hits=raycaster.intersectObjects(scene.children,true);
+  if(!hits.length) return;
+  // 优先球，其次机器人，最后地面
+  let best=hits[0];
+  for(const h of hits){
+    const o=h.object;
+    if(o.material===matBall||o.material===matBallHot||o.material===matBallBag){best=h;break}
+    if(robot.getObjectById(o.id)){best=h;break}
+  }
+  const p=best.point.clone();
+  ctrl.target.lerp(p,0.85);
+  ctrl.update();
+  log('焦点 → ('+p.x.toFixed(1)+', '+p.z.toFixed(1)+')');
+});
+
+/**
+ * 跟随：只把观察焦点平滑拉到车上；
+ * 相机位置/朝向仍由 OrbitControls 管理，可自由拖拽旋转、滚轮缩放
+ */
+function updateCamera(dt){
+  if(!followOn){ctrl.update();return}
+  const k=1-Math.exp(-4*dt);
+  ctrl.target.lerp(new THREE.Vector3(botSim.pos.x,0.15,botSim.pos.z),k);
+  ctrl.update();
+}
+
+let last=performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  updateMachine(dt);
+  for(const b of balls){
+    if(!b.alive||b.intaking) continue;
+    stepBall(b,dt,bounds);
+    collideBallWithChassis(b);
+    if(b.mesh){
+      b.mesh.position.copy(b.pos);
+      const sp=Math.hypot(b.vel.x,b.vel.z);
+      if(sp>0.05&&b.pos.y<=b.r+0.01){
+        b.mesh.rotation.x+=(b.vel.z/b.r)*dt*0.5;
+        b.mesh.rotation.z-=(b.vel.x/b.r)*dt*0.5;
+      }
+    }
+  }
+  if(botSim.running){
+    // 行进中被动吸入：开过前口即收，不打断行驶
+    for(const b of aliveBalls()){
+      if(b.intaking) continue;
+      if(ballInMouthWorld(b.pos)){
+        if(startIntake(b)){
+          log('路过吸入 #'+b.id);
+          // 不切换到停车状态，保持当前任务
+          if(botSim.target===b){
+            botSim.target=pickTarget();
+            if(botSim.target&&needDetourTo(botSim.target.pos.x,botSim.target.pos.z)){
+              botSim.path=pathAroundNetTo(botSim.target.pos.x,botSim.target.pos.z);
+              botSim.pathI=0; setRState(RState.DETOUR);
+            }else if(botSim.target) setRState(RState.FACE);
+            else setRState(RState.SEARCH);
+          }
+          break;
+        }
+      }
+    }
+  }
+  updateIntake(dt);
+  stepBagPhysics(dt);
+  botFirmware(dt);
+  updateCamera(dt);
+  updateHUD();
+  renderer.render(scene,camera);
+}
+addEventListener('resize',()=>{
+  camera.aspect=wrap.clientWidth/wrap.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(wrap.clientWidth,wrap.clientHeight);
+});
+
+resetAll();
+// 默认自由视角：整场概览（可拖拽/缩放/单击改焦点）
+ctrl.target.set(2,0,0);
+camera.position.set(18,16,14);
+ctrl.minDistance=3;
+ctrl.maxDistance=48;
+if(new URLSearchParams(location.search).get('auto')==='1'){
+  el.bFire.click();
+  setTimeout(()=>el.bCollect.click(),800);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

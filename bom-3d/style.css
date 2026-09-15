@@ -161,18 +161,23 @@ html, body {
 #viewport {
   position: relative;
   min-width: 0;
+  min-height: 0;
   background: radial-gradient(ellipse at 50% 40%, #152030 0%, var(--bg) 70%);
 }
 
 #canvasWrap {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  min-height: 240px;
 }
 
 #canvasWrap canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
+  outline: none;
 }
 
 .toolbar {
@@ -256,6 +261,127 @@ html, body {
 }
 
 .drag-hint.show { opacity: 1; }
+
+.tsep {
+  width: 1px;
+  height: 22px;
+  background: var(--line);
+  margin: 0 2px;
+}
+
+.expl-bar {
+  position: absolute;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 5;
+  background: rgba(18, 23, 31, 0.88);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  backdrop-filter: blur(8px);
+  min-width: 260px;
+}
+
+.expl-bar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.expl-bar input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.expl-bar span {
+  font-family: var(--mono);
+  color: var(--accent);
+  min-width: 36px;
+  text-align: right;
+}
+
+.expl-bar.hide { display: none; }
+
+.mod-bar {
+  position: absolute;
+  top: 88px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+  z-index: 5;
+  max-width: calc(100% - 24px);
+}
+
+.mod-bar.hide { display: none; }
+
+.mbtn {
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(18, 23, 31, 0.88);
+  color: var(--ink);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mbtn:hover { border-color: var(--accent); }
+.mbtn.on {
+  border-color: var(--accent2);
+  color: var(--accent2);
+  background: rgba(61, 214, 140, 0.12);
+}
+
+.audit {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+.audit .ok { color: var(--accent2); }
+.audit .fix { color: var(--accent); }
+.audit .warn { color: var(--warn); }
+
+.install-box {
+  background: rgba(232, 93, 4, 0.08);
+  border: 1px solid rgba(232, 93, 4, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #e8d0c0;
+}
+
+.param-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.param-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.param-table td:first-child {
+  color: var(--muted);
+  width: 72px;
+  white-space: nowrap;
+}
 
 /* ── 右：详情 ── */
 #detail {

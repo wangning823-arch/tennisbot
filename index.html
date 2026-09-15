@@ -683,7 +683,8 @@ const rollerPivot = new THREE.Group();
   const g = new THREE.Group();
   const motorY = D.rollZ;
   const motorZ = 0.155;
-  const motorX = D.rollX - 0.02;
+  // frontUnit 本地：滚轮轴在 x=0（父级已含 D.rollX）
+  const motorX = -0.02;
 
   // JGB37-520 风格：电机筒 + 减速箱 + 出轴
   g.add(cyl(0.024, 0.055, MAT.dark, motorX, motorY, motorZ, Math.PI / 2, 0, 0, 32));
@@ -711,39 +712,40 @@ const rollerPivot = new THREE.Group();
   g.add(box(0.030, 0.014, 0.024, MAT.frame,
     motorX - 0.010, D.bodyZ + 0.02, motorZ - 0.008));
 
-  // GT2 带轮 20T/40T
+  // GT2 带轮 20T/40T（从动轮在滚轮轴 local x=0）
   const pulleyR1 = 0.020;
   const pulleyR2 = 0.014;
   const beltZ = motorZ - 0.012;
-  g.add(cyl(pulleyR1, 0.012, MAT.metal, D.rollX, D.rollZ, beltZ, Math.PI / 2, 0, 0, 24));
+  g.add(cyl(pulleyR1, 0.012, MAT.metal, 0, D.rollZ, beltZ, Math.PI / 2, 0, 0, 24));
   g.add(cyl(pulleyR2, 0.012, MAT.metal, motorX, motorY, beltZ, Math.PI / 2, 0, 0, 20));
   // 齿形示意（外缘细环）
-  g.add(cyl(pulleyR1 + 0.001, 0.008, MAT.rubber, D.rollX, D.rollZ, beltZ, Math.PI / 2, 0, 0, 24));
+  g.add(cyl(pulleyR1 + 0.001, 0.008, MAT.rubber, 0, D.rollZ, beltZ, Math.PI / 2, 0, 0, 24));
   g.add(cyl(pulleyR2 + 0.001, 0.008, MAT.rubber, motorX, motorY, beltZ, Math.PI / 2, 0, 0, 20));
   // 张紧惰轮
-  const midX = (D.rollX + motorX) / 2 + 0.004;
-  const midY = (D.rollZ + motorY) / 2 - 0.018;
+  const midX = motorX / 2 + 0.004;
+  const midY = D.rollZ - 0.018;
   g.add(cyl(0.008, 0.010, MAT.rubber, midX, midY, beltZ, Math.PI / 2, 0, 0, 16));
   g.add(box(0.012, 0.020, 0.008, MAT.frame, midX, midY + 0.010, beltZ));
 
   // 同步带
-  const dx = motorX - D.rollX;
+  const dx = motorX;
   const dy = motorY - D.rollZ;
   const beltLen = Math.hypot(dx, dy);
   const beltAng = Math.atan2(dy, dx);
   g.add(box(beltLen, 0.006, 0.004, MAT.rubber,
-    (D.rollX + motorX) / 2, (D.rollZ + motorY) / 2 + (pulleyR1 + pulleyR2) / 2,
+    motorX / 2, (D.rollZ + motorY) / 2 + (pulleyR1 + pulleyR2) / 2,
     beltZ, 0, 0, beltAng));
   g.add(box(beltLen, 0.006, 0.004, MAT.rubber,
-    (D.rollX + motorX) / 2, (D.rollZ + motorY) / 2 - (pulleyR1 + pulleyR2) / 2,
+    motorX / 2, (D.rollZ + motorY) / 2 - (pulleyR1 + pulleyR2) / 2,
     beltZ, 0, 0, beltAng));
 
-  // 驱动线：波纹管示意 + 接插件
+  // 驱动线：波纹管示意 + 接插件（目标世界 x≈0.02 → 局部 0.02-rollX）
+  const ecuLocalX = 0.02 - D.rollX;
   const wirePts = [
     new THREE.Vector3(motorX, motorY - 0.03, motorZ - 0.02),
     new THREE.Vector3(motorX - 0.08, motorY - 0.05, 0.14),
-    new THREE.Vector3(0.02, D.bodyZ + 0.05, 0.12),
-    new THREE.Vector3(-0.06, D.bodyZ + 0.05, 0.12),
+    new THREE.Vector3(ecuLocalX, D.bodyZ + 0.05, 0.12),
+    new THREE.Vector3(ecuLocalX - 0.08, D.bodyZ + 0.05, 0.12),
   ];
   const wireGeo = new THREE.TubeGeometry(
     new THREE.CatmullRomCurve3(wirePts), 20, 0.0035, 6, false
@@ -757,6 +759,7 @@ const rollerPivot = new THREE.Group();
     group: 'collect',
     desc: 'JGB37-520 12V 减速电机内侧安装，GT2 同步带 + 惰轮张紧驱动滚轮轴。堵转电流检测反转保护。'
   });
+  frontUnit.add(g);
 }
 
 /* ══════════════════════════════════════

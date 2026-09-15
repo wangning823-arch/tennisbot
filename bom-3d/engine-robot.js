@@ -1,10 +1,12 @@
+/* KIT-TBR-01 工程化整机几何 · 与根目录 index.html 一致 */
+(function(){
 /**
  * KIT-TBR-01 完整工程化机器人模型（与 index.html 几何一致）
  * 本地坐标：+X 前 / +Y 上 / +Z 右
  */
-import * as THREE from 'three';
+/* uses global THREE */
 
-export const D = {
+const D = {
   bodyX0: -0.30, bodyL: 0.56, bodyW: 0.46, bodyH: 0.135,
   bodyZ: 0.035,
   get bodyTop() { return this.bodyZ + this.bodyH; },
@@ -59,10 +61,10 @@ export const D = {
   mh: 0.045,
 };
 
-export const BR = 0.0335;
-export const BASE_ROLL_X = 0.24;
+const BR = 0.0335;
+const BASE_ROLL_X = 0.24;
 
-export function makeMats() {
+function makeMats() {
   return {
     extrusion: new THREE.MeshStandardMaterial({ color: 0x2b2e33, metalness: 0.72, roughness: 0.38 }),
     plate:     new THREE.MeshStandardMaterial({ color: 0x9aa1a8, metalness: 0.82, roughness: 0.32 }),
@@ -121,7 +123,7 @@ function ballMesh(r, mat, x, y, z) {
  * 构建完整机器人
  * @returns {{ root: THREE.Group, parts: object, rollAdj: {bottom:number}, MAT: object }}
  */
-export function buildRobot() {
+function buildRobot() {
   const MAT = makeMats();
   const root = new THREE.Group();
   const parts = {};
@@ -326,13 +328,13 @@ export function buildRobot() {
     parts.roller = g;
   }
 
-  // 滚轮电机 + GT2
-  // frontUnit.position.x = D.rollX，此处必须用局部坐标（滚轮轴 x=0）
+  // 滚轮电机 + GT2（frontUnit 局部坐标：原点在滚轮轴线 x=0）
+  // 父级 frontUnit.position.x = D.rollX，此处不可再写 D.rollX
   {
     const g = new THREE.Group();
     const motorY = D.rollZ;
     const motorZ = 0.155;
-    const motorX = -0.02; // 相对滚轮轴后移 20mm（勿写 D.rollX-0.02）
+    const motorX = -0.02; // 相对滚轮轴后移 20 mm
     g.add(cyl(0.024, 0.055, MAT.dark, motorX, motorY, motorZ, Math.PI / 2, 0, 0, 32));
     g.add(cyl(0.028, 0.028, MAT.metal, motorX, motorY, motorZ + 0.042, Math.PI / 2, 0, 0, 32));
     for (let i = 0; i < 4; i++) {
@@ -347,10 +349,12 @@ export function buildRobot() {
       g.add(cyl(0.0025, 0.012, MAT.hole, motorX, motorY + dy, motorZ - 0.020, Math.PI / 2, 0, 0, 8));
     }
     g.add(box(0.048, 0.012, 0.040, MAT.frame, motorX, motorY - 0.036, motorZ - 0.010));
+    // 生根车体：local y 与 frontUnit 无关（父 y≈0）；local x 相对滚轮轴
     g.add(box(0.014, 0.050, 0.016, MAT.extrusion, motorX - 0.010, (D.bodyTop + D.bodyZ) / 2, motorZ - 0.008));
     g.add(box(0.030, 0.014, 0.024, MAT.frame, motorX - 0.010, D.bodyTop - 0.01, motorZ - 0.008));
     g.add(box(0.030, 0.014, 0.024, MAT.frame, motorX - 0.010, D.bodyZ + 0.02, motorZ - 0.008));
     const pulleyR1 = 0.020, pulleyR2 = 0.014, beltZ = motorZ - 0.012;
+    // 滚轮轴上的从动轮：局部 x=0
     g.add(cyl(pulleyR1, 0.012, MAT.metal, 0, D.rollZ, beltZ, Math.PI / 2, 0, 0, 24));
     g.add(cyl(pulleyR2, 0.012, MAT.metal, motorX, motorY, beltZ, Math.PI / 2, 0, 0, 20));
     g.add(cyl(pulleyR1 + 0.001, 0.008, MAT.rubber, 0, D.rollZ, beltZ, Math.PI / 2, 0, 0, 24));
@@ -359,12 +363,13 @@ export function buildRobot() {
     const midY = D.rollZ - 0.018;
     g.add(cyl(0.008, 0.010, MAT.rubber, midX, midY, beltZ, Math.PI / 2, 0, 0, 16));
     g.add(box(0.012, 0.020, 0.008, MAT.frame, midX, midY + 0.010, beltZ));
-    const dx = motorX, dy = motorY - D.rollZ;
+    const dx = motorX - 0, dy = motorY - D.rollZ;
     const beltLen = Math.hypot(dx, dy), beltAng = Math.atan2(dy, dx);
     g.add(box(beltLen, 0.006, 0.004, MAT.rubber,
       motorX / 2, (D.rollZ + motorY) / 2 + (pulleyR1 + pulleyR2) / 2, beltZ, 0, 0, beltAng));
     g.add(box(beltLen, 0.006, 0.004, MAT.rubber,
       motorX / 2, (D.rollZ + motorY) / 2 - (pulleyR1 + pulleyR2) / 2, beltZ, 0, 0, beltAng));
+    // 走线到电控舱：世界目标 x≈0.02 → 局部 = 0.02 - D.rollX
     const ecuLocalX = 0.02 - D.rollX;
     const wirePts = [
       new THREE.Vector3(motorX, motorY - 0.03, motorZ - 0.02),
@@ -716,3 +721,6 @@ export function buildRobot() {
     },
   };
 }
+
+window.EngineRobot={D:D,BR:BR,BASE_ROLL_X:BASE_ROLL_X,buildRobot:buildRobot,makeMats:makeMats};
+})();

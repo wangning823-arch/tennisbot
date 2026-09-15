@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KIT-TBR-01 · BOM 部件 3D 预览</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="brand">
+        <h1>BOM 部件 3D 预览</h1>
+        <div class="sub">网球自动捡球机器人 · 可拖动连接件</div>
+        <span class="ver">KIT-TBR-01 · E1.2</span>
+      </div>
+      <div class="search">
+        <input id="searchInput" type="search" placeholder="搜索件号 / 名称 / 规格…" />
+      </div>
+      <div id="partList"></div>
+    </aside>
+
+    <main id="viewport">
+      <div class="toolbar">
+        <button class="tbtn on-ok" id="btnFull">总装图</button>
+        <button class="tbtn" id="btnPart">部件</button>
+        <button class="tbtn" id="btnAsm">连接装配</button>
+        <span class="tsep"></span>
+        <button class="tbtn on" id="btnSolid">实体</button>
+        <button class="tbtn" id="btnXray">透视</button>
+        <button class="tbtn" id="btnWire">线框</button>
+        <button class="tbtn" id="btnResetCam">复位</button>
+      </div>
+      <div class="expl-bar" id="explBar">
+        <label>爆炸拆解 <input type="range" id="explodeSlider" min="0" max="100" value="0" /></label>
+        <span id="explodePct">0%</span>
+      </div>
+      <div class="mod-bar" id="modBar"></div>
+      <div id="canvasWrap"></div>
+      <div class="loading" id="loading">加载中…</div>
+      <div class="hud">
+        拖拽旋转 · 滚轮缩放 · 右键平移 · <b>点零件看尺寸与安装</b><br />
+        <b id="dragInfo"></b>
+      </div>
+      <div class="mode-chip" id="modeChip">总装图</div>
+      <div class="drag-hint" id="dragHint">拖动滑条爆炸拆解 · 点击零件查看参数与安装方法</div>
+    </main>
+
+    <aside id="detail">
+      <div class="detail-scroll" id="detailBody">
+        <div class="empty">选择左侧 BOM 部件或连接方式…</div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/OrbitControls.js"></script>
+  <script src="vendor/STLLoader.js"></script>
+  <script src="engine-robot.js"></script>
+  <script src="bom-data.js"></script>
+  <script>
+    window.addEventListener("error", function (e) {
+      var el = document.getElementById("loading");
+      if (el) {
+        el.classList.remove("hide");
+        el.innerHTML =
+          "运行错误：" +
+          (e.message || e.type) +
+          (e.filename ? "<br/><small>" + e.filename + ":" + e.lineno + "</small>" : "");
+      }
+    });
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>

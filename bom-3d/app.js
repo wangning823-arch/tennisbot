@@ -516,6 +516,7 @@ function clearView() {
   fullNodes = [];
   engineRoot = null;
   bodyMeshes = [];
+  bomGroups = {};
 }
 
 function applyViewMode(group) {
@@ -892,7 +893,7 @@ function renderPartList() {
   list.innerHTML = "";
 
   const fullBtn = document.createElement("button");
-  fullBtn.className = "part-item" + (state.mode === "full" ? " on" : "");
+  fullBtn.className = "part-item" + (state.mode === "full" && !state.partId ? " on" : "");
   fullBtn.innerHTML = `
     <span class="sw" style="background:#3dd68c"></span>
     <span class="nm">★ 总装图<small>整机爆炸 / 模块过滤 / 点选零件</small></span>
@@ -916,7 +917,7 @@ function renderPartList() {
     list.appendChild(head);
     for (const p of items) {
       const btn = document.createElement("button");
-      btn.className = "part-item" + (state.mode === "part" && state.partId === p.id ? " on" : "");
+      btn.className = "part-item" + (state.partId === p.id ? " on" : "");
       btn.innerHTML = `
         <span class="sw" style="background:${p.color}"></span>
         <span class="nm">${p.name}<small>${p.id} · ${p.spec || ""}</small></span>
@@ -957,7 +958,7 @@ function renderDetailPart(part, engMod, note) {
       note
         ? `<div class="install-box" style="margin-top:8px">${note}</div>`
         : em
-        ? `<div class="install-box" style="margin-top:8px">已在总装中高亮该子系统（橙色）；其余半透明。拖滑条可继续爆炸，便于看清安装位置与配合关系。</div>`
+        ? `<div class="install-box" style="margin-top:8px">橙色=选中件，黄色=相关连接件；其余不透明度 0.1。拖滑条可继续爆炸。</div>`
         : ""
     }
     <div class="meta-grid">
@@ -1102,6 +1103,7 @@ function renderDetailAsm(asm) {
 let fullNodes = []; // 工程模块组
 let engineRoot = null;
 let bodyMeshes = []; // 底盘板件，爆炸时半透明便于看车下
+let bomGroups = {}; // BOM 件号 → 可独立高亮的组
 
 function cloneMaterialsDeep(g) {
   g.traverse((o) => {
@@ -1270,8 +1272,9 @@ function isolateEngineModule(engineKey) {
             m.emissiveIntensity = 0.45;
           }
         } else {
+          // 未选中：不透明度 0.1（透明度 90%），几乎隐去以突出选中件
           m.transparent = true;
-          m.opacity = 0.12;
+          m.opacity = 0.1;
           m.wireframe = false;
           m.depthWrite = false;
           m.side = THREE.DoubleSide;
@@ -1310,36 +1313,161 @@ function restoreFullSolid() {
   }
 }
 
-/** 选中 BOM 件 → 在总装中定位高亮（不是单独漂浮展示） */
+/** 按 BOM 件号细粒度隔离：选中件+关联连接件实体，其余 0.1 */
+function isolateByBomPart(partId) {
+  const part = byId[partId];
+  if (!part) return;
+  const primary = new Set([partId]);
+  const related = new Set(part.connects || []);
+
+  // 车体类：关联里有几何的子件也保持可见
+  function isPrimaryGroup(g) {
+    return g && primary.has(g.userData.bomId || g.userData.engineKey || g.userData.partId);
+  }
+  function isRelatedGroup(g) {
+    if (!g) return false;
+    const id = g.userData.bomId || g.userData.engineKey || g.userData.partId;
+    return related.has(id);
+  }
+
+  // 顶层模块：若选中的是车体子件，整机 body 模块仍显示但其内部子件按 bomId 区分
+  for (const g of fullNodes) {
+    const ek = g.userData.engineKey;
+    // body 模块特殊处理
+    if (ek === "body" && bomGroups[partId]) {
+      g.visible = true;
+      g.traverse((o) => {
+        if (!o.isMesh || !o.material) return;
+        const bid = o.userData.bomId;
+        const mode = primary.has(bid) ? "primary" : related.has(bid) ? "related" : "ghost";
+        applyMeshIsolate(o, mode);
+      });
+      continue;
+    }
+    if (isPrimaryGroup(g)) {
+      g.visible = true;
+      g.traverse((o) => {
+        if (o.isMesh) applyMeshIsolate(o, "primary");
+      });
+    } else if (isRelatedGroup(g)) {
+      g.visible = true;
+      g.traverse((o) => {
+        if (o.isMesh) applyMeshIsolate(o, "related");
+      });
+    } else if (bomGroups[partId]) {
+      // 选中的是车体子件时，其它顶层模块隐去
+      g.traverse((o) => {
+        if (o.isMesh) applyMeshIsolate(o, "ghost");
+      });
+    } else {
+      // 选中的是顶层模块对应件
+      const emPart = g.userData.partId;
+      if (primary.has(emPart)) {
+        g.visible = true;
+        g.traverse((o) => {
+          if (o.isMesh) applyMeshIsolate(o, "primary");
+        });
+      } else if (related.has(emPart) || related.has(g.userData.engineKey)) {
+        g.visible = true;
+        g.traverse((o) => {
+          if (o.isMesh) applyMeshIsolate(o, "related");
+        });
+      } else {
+        g.traverse((o) => {
+          if (o.isMesh) applyMeshIsolate(o, "ghost");
+        });
+      }
+    }
+  }
+
+  // 镜头对准主选中组
+  let target = bomGroups[partId] || fullNodes.find((n) => n.userData.partId === partId);
+  if (!target && partId) {
+    // F-01 等紧固件挂在 bodySubs
+    target = bomGroups[partId];
+  }
+  focusOnGroup(target);
+}
+
+function applyMeshIsolate(mesh, mode) {
+  if (!mesh.material) return;
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  for (const m of mats) {
+    if (!m.userData._orig) {
+      m.userData._orig = {
+        transparent: m.transparent,
+        opacity: m.opacity,
+        wireframe: m.wireframe,
+        depthWrite: m.depthWrite,
+        side: m.side,
+      };
+    }
+    const o0 = m.userData._orig;
+    if (mode === "primary") {
+      m.transparent = !!o0.transparent;
+      m.opacity = o0.opacity;
+      m.wireframe = false;
+      m.depthWrite = true;
+      if (m.emissive) {
+        if (!m.userData._baseEmissive) m.userData._baseEmissive = m.emissive.clone();
+        m.emissive.setHex(0xff6a00);
+        m.emissiveIntensity = 0.85;
+      }
+    } else if (mode === "related") {
+      m.transparent = !!o0.transparent;
+      m.opacity = o0.opacity;
+      m.wireframe = false;
+      m.depthWrite = true;
+      if (m.emissive) {
+        if (!m.userData._baseEmissive) m.userData._baseEmissive = m.emissive.clone();
+        m.emissive.setHex(0xf0c040);
+        m.emissiveIntensity = 0.45;
+      }
+    } else {
+      // ghost：不透明度 0.1
+      m.transparent = true;
+      m.opacity = 0.1;
+      m.wireframe = false;
+      m.depthWrite = false;
+      m.side = THREE.DoubleSide;
+      if (m.emissive && m.userData._baseEmissive) {
+        m.emissive.copy(m.userData._baseEmissive);
+        m.emissiveIntensity = 1;
+      }
+    }
+    m.needsUpdate = true;
+  }
+}
+
+/** 选中 BOM 件 → 在总装中定位高亮（细粒度：只亮该件+关联连接件） */
 function showPartInAssembly(partId) {
   const part = byId[partId];
   if (!part) return;
-  const em = findEngineModuleForPart(partId);
 
   if (!fullNodes.length) showFullAssembly();
   state.mode = "full";
   state.partId = partId;
   state.moduleFilter = null;
+  state.selectedFullId = partId;
 
-  if (!em) {
-    state.selectedFullId = null;
-    restoreFullSolid();
-    document.getElementById("modeChip").textContent = "总装 · " + partId;
-    renderDetailPart(part, null, "该件为通用紧固件/线材，无独立总装子系统；请看关联件与连接场景。");
-    renderPartList();
-    updateModeChip();
-    setModeButtons();
-    return;
-  }
-
-  state.selectedFullId = em.key;
   if (explSlider) {
-    explSlider.value = 25;
-    applyFullExplode(0.25);
+    explSlider.value = 20;
+    applyFullExplode(0.2);
   }
-  isolateEngineModule(em.key);
+
+  const hasFine = !!bomGroups[partId];
+  const em = findEngineModuleForPart(partId);
+  if (hasFine || part.connects?.length) {
+    isolateByBomPart(partId);
+  } else if (em) {
+    isolateEngineModule(em.key);
+  } else {
+    restoreFullSolid();
+  }
+
+  const emLabel = em ? em.label : hasFine ? "车体零件" : "—";
   document.getElementById("modeChip").textContent =
-    "总装定位 · " + partId + " ∈ " + em.label;
+    "总装定位 · " + partId + "（" + part.name + "）";
   renderDetailPart(part, em, null);
   renderPartList();
   updateModeChip();
@@ -1352,6 +1480,7 @@ function showFullAssembly() {
   state.explode = 0;
   state.moduleFilter = null;
   state.selectedFullId = null;
+  state.partId = null;
   clearView();
   fullNodes = [];
   setLoading(true, "构建工程总装图…");
@@ -1369,6 +1498,12 @@ function showFullAssembly() {
     if (!o.isMesh || !o.material) return;
     if (Array.isArray(o.material)) o.material = o.material.map((m) => m.clone());
     else o.material = o.material.clone();
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) {
+      if (m.emissive && !m.userData._baseEmissive) {
+        m.userData._baseEmissive = m.emissive.clone();
+      }
+    }
   });
   engineRoot = built.root;
   viewGroup.add(built.root);
@@ -1384,6 +1519,19 @@ function showFullAssembly() {
         if (!m.userData._baseTransparent) m.userData._baseTransparent = m.transparent;
       }
     });
+  }
+
+  // 注册按 BOM 件号的细粒度组（车体子件等）
+  bomGroups = {};
+  if (built.parts.bodySubs) {
+    for (const bid of Object.keys(built.parts.bodySubs)) {
+      const g = built.parts.bodySubs[bid];
+      g.userData.bomId = bid;
+      g.traverse((o) => {
+        if (o.isMesh) o.userData.bomId = bid;
+      });
+      bomGroups[bid] = g;
+    }
   }
 
   for (const em of ENGINE_MODULES) {
@@ -1486,18 +1634,28 @@ function pickFullPart(clientX, clientY) {
   const hits = raycaster.intersectObjects(fullNodes, true);
   if (!hits.length) {
     state.selectedFullId = null;
+    state.partId = null;
     restoreFullSolid();
     renderDetailFull(null);
+    renderPartList();
     return;
   }
   let obj = hits[0].object;
-  while (obj && !obj.userData.partId && !obj.userData.engineKey) obj = obj.parent;
+  while (obj && !obj.userData.bomId && !obj.userData.partId && !obj.userData.engineKey) obj = obj.parent;
   if (!obj) return;
-  const pid = obj.userData.partId;
+  const bid = obj.userData.bomId || obj.userData.partId;
   const ekey = obj.userData.engineKey;
-  state.selectedFullId = ekey || pid;
-  if (ekey) isolateEngineModule(ekey);
-  renderDetailFull(byId[pid], obj.userData.module, obj.userData.related, ekey);
+  state.selectedFullId = bid || ekey;
+  state.partId = bid || null;
+  if (bid && byId[bid]) {
+    isolateByBomPart(bid);
+    renderDetailPart(byId[bid], findEngineModuleForPart(bid), null);
+  } else if (ekey) {
+    isolateEngineModule(ekey);
+    renderDetailFull(byId[obj.userData.partId], obj.userData.module, obj.userData.related, ekey);
+  }
+  renderPartList();
+  updateModeChip();
 }
 
 function highlightFull(key) {
@@ -1678,7 +1836,8 @@ if (explSlider) {
     explPct.textContent = explSlider.value + "%";
     if (state.mode === "full") {
       applyFullExplode(t);
-      if (state.selectedFullId) isolateEngineModule(state.selectedFullId);
+      if (state.selectedFullId && byId[state.selectedFullId]) isolateByBomPart(state.selectedFullId);
+      else if (state.selectedFullId) isolateEngineModule(state.selectedFullId);
     } else applyExplode(t);
   };
 }

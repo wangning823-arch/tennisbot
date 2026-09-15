@@ -5,7 +5,8 @@ const path = require("path");
 const P = (o) => o;
 
 const parts = [
-  P({ id: "E-01", cat: "extrusion", name: "纵梁", spec: "2020 · L560", qty: 2, color: "#2b2e33", dims: "560×20×20 mm", material: "6063-T5 阳极黑", tol: "下料±1；垂直度±0.5°", desc: "左右主梁，车架纵长基准", install: "与 E-02/E-04 角件+T螺母+M5×12 连接；底板经槽 M5×8+法兰螺母。先装左右纵梁成框再装横梁。", connects: ["F-01", "F-04", "ACC-CORNER", "PL-01"], model: { type: "extrusion", length: 0.56 }, module: "M1" }),
+  P({ id: "E-01", cat: "extrusion", name: "纵梁", spec: "2020 · L560", qty: 2, color: "#2b2e33", dims: "560×20×20 mm", material: "6063-T5 阳极黑", tol: "下料±1；垂直度±0.5°", desc: "左右主梁（平台顶侧），车架纵长基准", install: "与 E-02/E-04 角件+T螺母+M5×12 连接；底板经槽 M5×8+法兰螺母。先装左右纵梁成框再装横梁。配套底框短梁见 E-01B。", connects: ["F-01", "F-04", "ACC-CORNER", "PL-01", "E-01B"], model: { type: "extrusion", length: 0.56 }, module: "M1" }),
+  P({ id: "E-01B", cat: "extrusion", name: "底框纵梁", spec: "2020 · L≈310", qty: 2, color: "#2b2e33", dims: "约 310×20×20 mm", material: "6063-T5 阳极黑", tol: "下料±1", desc: "平台底左右短纵梁（图中下方两根），与 E-01 同规格型材裁短", install: "与 E-02/E-04 底框角件连接，托住底板；不伸入滚轮进料口中心。原切割清单未单列，可并入 2020 采购余量。", connects: ["E-01", "F-01", "F-04", "PL-01"], model: { type: "extrusion", length: 0.31 }, module: "M1" }),
   P({ id: "E-02", cat: "extrusion", name: "后横梁", spec: "2020 · L420", qty: 1, color: "#2b2e33", dims: "420×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "后端封闭", install: "与 E-01 后端角件连接；后舱围板顶沿对齐。", connects: ["F-01", "F-04", "ACC-CORNER"], model: { type: "extrusion", length: 0.42 }, module: "M1" }),
   P({ id: "E-03", cat: "extrusion", name: "中横梁", spec: "2020 · L420", qty: 1, color: "#2b2e33", dims: "420×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "电池仓分隔", install: "T螺母滑入 E-01 槽，M5×10 锁紧。", connects: ["F-01", "F-04", "ACC-CORNER"], model: { type: "extrusion", length: 0.42 }, module: "M1" }),
   P({ id: "E-04", cat: "extrusion", name: "前横梁", spec: "2020 · L420", qty: 1, color: "#2b2e33", dims: "420×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "前轮/滚轮滑轨根", install: "与 E-01 前端角件连接；E-07 装其上，S-01 舵机座吊梁下中置。", connects: ["F-01", "F-04", "ACC-CORNER", "E-07", "ST-servo"], model: { type: "extrusion", length: 0.42 }, module: "M1" }),
@@ -79,6 +80,33 @@ const parts = [
   P({ id: "U-08", cat: "elec", name: "3S LiPo 5200", spec: "11.1V ≥30C XT60", qty: 1, color: "#3d5a80", dims: "3S 5200mAh", material: "软包LiPo", tol: "10.5报警/9.9切断", desc: "主动力电池 ≥45min", install: "扎带+EVA限位，导线不承力；XT60+平衡头座；急停串主回路。", connects: ["W-06"], model: { type: "lipo" }, module: "M6" }),
   P({ id: "W-06", cat: "wire", name: "XT60 公+母", spec: "电池主回路", qty: 2, color: "#f0c040", dims: "XT60对", material: "尼龙+镀金", tol: "—", desc: "动力插拔", install: "14AWG出线；焊后热缩；防反插。", connects: ["U-08"], model: { type: "xt60" }, module: "M6" }),
   P({ id: "W-07", cat: "wire", name: "JST-SM 2P", spec: "电机接插件", qty: 4, color: "#e8e8e8", dims: "2P", material: "尼龙+端子", tol: "—", desc: "电机可拔 便于换无刷", install: "电机/驱动各一；活动段留15%；波纹管保护。", connects: ["M-01", "M-02", "U-05"], model: { type: "jst" }, module: "M6" }),
+
+  /* —— 官方清单补全（原 bom 缺失） —— */
+  P({ id: "ACC-END", cat: "fastener", name: "2020 端盖", spec: "塑料端盖", qty: 12, color: "#2b2e33", dims: "2020 塑料端盖", material: "尼龙", tol: "—", desc: "型材端头防尘/美观", install: "敲入型材端口。", connects: ["E-01", "E-02"], model: { type: "corner" }, module: "M1" }),
+  P({ id: "F-06", cat: "fastener", name: "M5 弹垫+平垫", spec: "—", qty: 80, color: "#9aa1a8", dims: "M5 垫片组", material: "钢", tol: "—", desc: "防松", install: "与 F-01/F-02 配对使用。", connects: ["F-01", "F-02"], model: { type: "flange_nut" }, module: "M1" }),
+  P({ id: "F-10", cat: "fastener", name: "M3×6 内六角", spec: "—", qty: 8, color: "#c0c6cc", dims: "M3×6", material: "碳钢", tol: "—", desc: "急停/开关固定", install: "面板开孔后锁紧。", connects: ["U-11", "U-10"], model: { type: "screw", d: 0.003, len: 0.006 }, module: "M6" }),
+  P({ id: "F-18", cat: "fastener", name: "尼龙扎带 3×150", spec: "—", qty: 30, color: "#e8e8e8", dims: "3×150", material: "尼龙", tol: "—", desc: "线束固定", install: "沿型材槽绑扎，活动段留余量。", connects: ["W-01"], model: { type: "jst" }, module: "M6" }),
+  P({ id: "F-19", cat: "fastener", name: "扎带座 3M 背胶", spec: "—", qty: 10, color: "#e8e8e8", dims: "背胶扎带座", material: "尼龙+3M", tol: "—", desc: "线束固定点", install: "清洁后粘贴于型材/板面。", connects: ["F-18"], model: { type: "jst" }, module: "M6" }),
+  P({ id: "F-20", cat: "fastener", name: "EPDM 密封条 3×8", spec: "—", qty: 1, color: "#1a1a1a", dims: "3×8 mm · 1.5m", material: "EPDM", tol: "—", desc: "筐沿/舱沿密封", install: "粘贴平台顶筐沿与电控舱口。", connects: ["ST-basket", "ST-ecu"], model: { type: "flange_nut" }, module: "M4" }),
+  P({ id: "F-21", cat: "fastener", name: "橡胶护边", spec: "—", qty: 1, color: "#1a1a1a", dims: "约 1 m", material: "橡胶", tol: "—", desc: "锐边防护", install: "扣在钣金/型材锐边。", connects: ["PL-01"], model: { type: "flange_nut" }, module: "M1" }),
+  P({ id: "BR-03", cat: "drive", name: "法兰轴承 6901", spec: "12×24×6 · 可选", qty: 2, color: "#b0b6bc", dims: "12×24×6", material: "轴承钢", tol: "—", desc: "前轮轮轴（若与 608 通用可取消）", install: "压入转向节轮轴孔；或改用 608 则本项取消。", connects: ["ST-knuckle", "BR-01"], model: { type: "bearing608" }, module: "M5" }),
+  P({ id: "SH-04", cat: "drive", name: "前轮轮轴", spec: "Ø6×40 · 可选", qty: 2, color: "#c0c6cc", dims: "Ø6×40", material: "圆钢", tol: "—", desc: "前轮轴（若不用 12mm 轴方案）", install: "穿转向节与轮毂，顶丝/挡圈定位。", connects: ["ST-knuckle", "WH-01"], model: { type: "shaft", d: 0.006, len: 0.04 }, module: "M5" }),
+  P({ id: "U-06", cat: "elec", name: "BEC 逻辑 5V3A", spec: "降压模块", qty: 1, color: "#22d866", dims: "5V 3A", material: "模块", tol: "—", desc: "Pi / ESP32 供电", install: "装电控舱；与舵机 BEC 分开。", connects: ["U-01", "U-02", "U-08"], model: { type: "driver" }, module: "M6" }),
+  P({ id: "U-07", cat: "elec", name: "BEC 舵机 5V3A", spec: "独立舵机供电", qty: 1, color: "#22d866", dims: "5V 3A", material: "模块", tol: "—", desc: "MG996R 专用，勿与逻辑共用", install: "独立从电池取电，只给舵机。", connects: ["S-01", "U-08"], model: { type: "driver" }, module: "M6" }),
+  P({ id: "U-09", cat: "elec", name: "平衡充 B6 类", spec: "外置充电", qty: 1, color: "#8899aa", dims: "B6 平衡充", material: "成品", tol: "—", desc: "3S LiPo 充电", install: "车侧只出 XT60+平衡头座，充电器外置。", connects: ["U-08"], model: { type: "driver" }, module: "M6" }),
+  P({ id: "U-10", cat: "elec", name: "主开关 15A", spec: "拨动开关", qty: 1, color: "#e85d04", dims: "15A 拨动", material: "成品", tol: "—", desc: "串主回路", install: "装后舱面板；与急停串联。", connects: ["U-08", "U-11"], model: { type: "estop" }, module: "M6" }),
+  P({ id: "U-11", cat: "elec", name: "急停蘑菇头", spec: "自锁 NC", qty: 1, color: "#cc2200", dims: "蘑菇头自锁", material: "成品", tol: "—", desc: "串动力回路，硬切断", install: "装后上角易按位置；NC 串电机与舵机动力。", connects: ["U-10", "U-05"], model: { type: "estop" }, module: "M7" }),
+  P({ id: "U-12", cat: "elec", name: "保险 5A", spec: "汽车插片+座", qty: 1, color: "#f0c040", dims: "5A 插片", material: "成品", tol: "—", desc: "主回路过流保护", install: "紧靠电池输出。", connects: ["U-08"], model: { type: "xt60" }, module: "M6" }),
+  P({ id: "U-13", cat: "elec", name: "电源分配板", spec: "洞洞板/端子", qty: 1, color: "#22d866", dims: "星形共地", material: "洞洞板", tol: "—", desc: "共地星形分配", install: "装 ECU 内；结构铝与电池负单点接地。", connects: ["U-06", "U-07", "U-08"], model: { type: "driver" }, module: "M6" }),
+  P({ id: "W-01", cat: "wire", name: "动力线 14AWG", spec: "硅胶线红黑", qty: 1, color: "#cc2200", dims: "各约 0.5 m", material: "硅胶线", tol: "—", desc: "电池→开关/驱动", install: "14AWG；焊后热缩。", connects: ["U-08", "W-06"], model: { type: "jst" }, module: "M6" }),
+  P({ id: "W-02", cat: "wire", name: "电机线 18AWG", spec: "—", qty: 1, color: "#e8e8e8", dims: "约 1 m", material: "硅胶线", tol: "—", desc: "驱动→电机", install: "与 JST-SM 端接。", connects: ["W-07", "U-05"], model: { type: "jst" }, module: "M6" }),
+  P({ id: "W-03", cat: "wire", name: "编码器线 4芯", spec: "28AWG 屏蔽", qty: 1, color: "#8899aa", dims: "约 0.8 m", material: "屏蔽线", tol: "—", desc: "后驱编码器", install: "XH2.54-6P 端接，尽量短、远离动力线。", connects: ["M-02", "U-02"], model: { type: "jst" }, module: "M6" }),
+  P({ id: "W-04", cat: "wire", name: "I2C 线 4芯", spec: "28AWG", qty: 1, color: "#8899aa", dims: "约 1 m", material: "多芯线", tol: "—", desc: "ToF 总线", install: "XH2.54-4P；VCC/GND/SDA/SCL。", connects: ["U-04", "U-02"], model: { type: "jst" }, module: "M7" }),
+  P({ id: "W-05", cat: "wire", name: "USB 线带磁环", spec: "A–C 或 A–Micro", qty: 1, color: "#e8e8e8", dims: "1 根", material: "成品", tol: "—", desc: "Pi↔摄像头 / Pi↔ESP32", install: "走梁槽，加磁环抑噪。", connects: ["U-01", "U-03"], model: { type: "jst" }, module: "M6" }),
+  P({ id: "W-08", cat: "wire", name: "XH2.54 端子", spec: "4P/6P", qty: 1, color: "#e8e8e8", dims: "若干", material: "尼龙+端子", tol: "—", desc: "传感/编码器", install: "压线后插入对应模块座。", connects: ["W-03", "W-04"], model: { type: "jst" }, module: "M6" }),
+  P({ id: "W-09", cat: "wire", name: "波纹管 Ø6/8", spec: "—", qty: 1, color: "#1a1a1a", dims: "约 2 m", material: "尼龙波纹管", tol: "—", desc: "线束保护", install: "活动段套管，留 15% 余量。", connects: ["W-01"], model: { type: "jst" }, module: "M6" }),
+  P({ id: "W-10", cat: "wire", name: "热缩管套装", spec: "3/5/8 mm", qty: 1, color: "#1a1a1a", dims: "1 套", material: "热缩管", tol: "—", desc: "端子绝缘", install: "焊后热缩烘缩。", connects: ["W-01", "W-06"], model: { type: "jst" }, module: "M6" }),
+  P({ id: "W-11", cat: "wire", name: "护线圈 Ø12", spec: "板孔用", qty: 6, color: "#1a1a1a", dims: "Ø12", material: "橡胶", tol: "—", desc: "底板走线孔防磨", install: "压入底板 φ12 孔。", connects: ["PL-01", "W-01"], model: { type: "jst" }, module: "M6" }),
 ];
 
 /* 总装放置（米）
@@ -255,9 +283,13 @@ const body =
         { level: "ok", msg: "轮距430、后驱单电机通轴、前轮中置舵机 与 E1.2 一致" },
         { level: "fix", msg: "E-08 改为沿X安装、限制筐Z向" },
         { level: "fix", msg: "补 WH-01/AL-01/PL-04/ACC-LINK/PU-04/ST-basket" },
+        { level: "fix", msg: "E-01 拆分：E-01×2 全长主梁 + E-01B×2 底框短梁" },
+        { level: "fix", msg: "补官方清单缺失件：端盖/F-06/F-10/F-18~21/BR-03/SH-04/U-06~13/W-01~05/W-08~11" },
         { level: "warn", msg: "PL-03 斜长按端点≈137mm，外形以钣金图为准" },
         { level: "warn", msg: "F-09 列24含电机座+舵机/盖；仅电机座可减到16" },
         { level: "warn", msg: "ST-tpu 宽352 vs 有效360，装配校核余量" },
+        { level: "warn", msg: "3D 不画满紧固件实例（如螺钉×40），左侧×N以采购清单为准" },
+        { level: "ok", msg: "3D 无「有几何但清单没有」的部件" },
       ],
       modules: [
         { id: "M1", name: "车架总成", color: "#2b2e33", explode: [0, -0.22, 0] },

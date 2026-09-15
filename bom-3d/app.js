@@ -375,6 +375,9 @@ function buildModel(def, colorHex) {
     g.add(box(0.011, 0.08, 0.011, MATS.petg, 0, 0.04, 0));
     g.add(box(0.02, 0.08, 0.004, MATS.petg, 0.008, 0.04, 0));
     g.add(box(0.004, 0.08, 0.02, MATS.petg, 0, 0.04, 0.008));
+  } else if (t === "estop") {
+    g.add(box(0.02, 0.01, 0.02, MATS.dark, 0, 0.005, 0));
+    g.add(cyl(0.008, 0.012, MATS.orange, 0, 0.016, 0, 0, 0, 0, 16));
   } else if (t === "sbc") {
     g.add(box(0.04, 0.002, 0.03, MATS.pcb, 0, 0.001, 0));
     g.add(box(0.015, 0.003, 0.012, MATS.dark, 0.008, 0.004, 0));
@@ -1124,7 +1127,7 @@ const ENGINE_MODULES = [
     module: "M1",
     partId: "PL-01",
     label: "车体 / 底板 / 型材",
-    related: ["E-01","E-02","E-03","E-04","E-07","E-08","PL-01","PL-02","ACC-CORNER","F-01","F-02","F-03","F-04","F-05"],
+    related: ["E-01","E-01B","E-02","E-03","E-04","E-07","E-08","PL-01","PL-02","ACC-CORNER","F-01","F-02","F-03","F-04","F-05"],
     // 平台整体上抬，露出车下件
     explode: [0, 0.22, 0],
   },

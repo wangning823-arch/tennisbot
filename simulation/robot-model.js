@@ -127,88 +127,124 @@ export function buildRobot() {
   const parts = {};
   const rollAdj = { bottom: D.rollBottom };
 
-  // ── 车体 ──
+  // ── 车体（按 BOM 件号拆分子组）──
   {
-    const g = new THREE.Group();
     const t = 0.013;
     const bz = D.bodyZ + D.bodyH / 2;
+    const g = new THREE.Group();
+    const sub = {};
+    function subG(id) {
+      if (!sub[id]) {
+        sub[id] = new THREE.Group();
+        sub[id].userData.bomId = id;
+        g.add(sub[id]);
+      }
+      return sub[id];
+    }
+
+    // E-01 纵梁 ×2（切割清单 560mm，左右各一根全长，平台顶侧）
+    for (const s of [1, -1]) {
+      subG("E-01").add(box(D.bodyL, 0.020, 0.020, MAT.extrusion,
+        D.bodyCx, D.bodyTop - 0.010, s * (D.bodyW / 2 - 0.012)));
+    }
+    // E-01B 底框侧梁 ×2（约 310mm，平台底侧，与 E-01 同料裁切）
+    // 注意：工程切割清单 E-01 写的是 2×560 主梁；底框短梁单独成件更准确
+    for (const s of [1, -1]) {
+      subG("E-01B").add(box(D.bodyL * 0.55, 0.020, 0.020, MAT.extrusion,
+        D.bodyX0 + D.bodyL * 0.55 / 2, D.bodyZ - 0.008, s * (D.bodyW / 2 - 0.020)));
+    }
+    // E-02 后横梁 ×1
+    subG("E-02").add(box(0.020, 0.020, D.bodyW, MAT.extrusion,
+      D.bodyX0 + 0.012, D.bodyTop - 0.010, 0));
+    // E-03 中横梁 ×1
+    subG("E-03").add(box(0.020, 0.020, D.bodyW, MAT.extrusion,
+      -0.08, D.bodyTop - 0.010, 0));
+    // E-04 前横梁 ×1：放在进料槽后方底框，轮下/进料口全开
+    subG("E-04").add(box(0.020, 0.020, D.bodyW, MAT.extrusion,
+      D.botSlotX0 - 0.02, D.bodyZ - 0.008, 0));
 
     const topRearL = D.basketFront - D.bodyX0;
-    g.add(box(topRearL, t, D.bodyW, MAT.plate, D.bodyX0 + topRearL / 2, D.bodyTop - t / 2, 0));
+    subG("PL-01").add(box(topRearL, t, D.bodyW, MAT.plate,
+      D.bodyX0 + topRearL / 2, D.bodyTop - t / 2, 0));
     const topFrontL = D.bodyFront - D.basketFront;
     const topSideW = (D.bodyW - D.topSlotW) / 2;
     for (const s of [1, -1]) {
-      g.add(box(topFrontL, t, topSideW, MAT.plate,
+      subG("PL-01").add(box(topFrontL, t, topSideW, MAT.plate,
         D.basketFront + topFrontL / 2, D.bodyTop - t / 2,
         s * (D.topSlotW / 2 + topSideW / 2)));
     }
-    for (const s of [1, -1]) {
-      g.add(box(D.bodyL, 0.020, 0.020, MAT.extrusion,
-        D.bodyCx, D.bodyTop - 0.010, s * (D.bodyW / 2 - 0.012)));
-    }
-
     const botRearL = D.botSlotX0 - D.bodyX0;
-    g.add(box(botRearL, t, D.bodyW, MAT.plate, D.bodyX0 + botRearL / 2, D.bodyZ + t / 2, 0));
+    subG("PL-01").add(box(botRearL, t, D.bodyW, MAT.plate,
+      D.bodyX0 + botRearL / 2, D.bodyZ + t / 2, 0));
     const botFrontL = D.bodyFront - D.botSlotX0;
     const botSideW = 0.035;
     const botSlotHalf = D.bodyW / 2 - botSideW;
     for (const s of [1, -1]) {
-      g.add(box(botFrontL, t, botSideW, MAT.plate,
+      subG("PL-01").add(box(botFrontL, t, botSideW, MAT.plate,
         D.botSlotX0 + botFrontL / 2, D.bodyZ + t / 2,
         s * (botSlotHalf - botSideW / 2)));
     }
     for (const s of [1, -1]) {
-      g.add(box(0.10, t + 0.006, 0.09, MAT.hole, D.wxFront, D.bodyZ + t / 2, s * (D.wy - 0.02)));
+      subG("PL-01").add(box(0.10, t + 0.006, 0.09, MAT.hole,
+        D.wxFront, D.bodyZ + t / 2, s * (D.wy - 0.02)));
     }
-    g.add(box(0.055, t + 0.004, 0.055, MAT.hole, D.wxRear, D.bodyZ + t / 2, 0));
-    for (const s of [1, -1]) {
-      g.add(box(botRearL, 0.020, 0.020, MAT.extrusion,
-        D.bodyX0 + botRearL / 2, D.bodyZ - 0.008, s * (D.bodyW / 2 - 0.020)));
-    }
+    subG("PL-01").add(box(0.055, t + 0.004, 0.055, MAT.hole,
+      D.wxRear, D.bodyZ + t / 2, 0));
 
     const skirtRear = 0.10 - D.bodyX0;
     for (const s of [1, -1]) {
-      g.add(box(skirtRear, D.bodyH, t, MAT.plate,
+      subG("PL-02").add(box(skirtRear, D.bodyH, t, MAT.plate,
         D.bodyX0 + skirtRear / 2, bz, s * (D.bodyW / 2 - t / 2)));
     }
-    g.add(box(t, D.bodyH, D.bodyW, MAT.plate, D.bodyX0 + t / 2, bz, 0));
-
+    subG("PL-02").add(box(t, D.bodyH, D.bodyW, MAT.plate, D.bodyX0 + t / 2, bz, 0));
     const mouthTop = D.mouthZ + D.mouthH / 2;
     const upH = D.bodyTop - mouthTop - 0.004;
     if (upH > 0.01) {
-      g.add(box(t, upH, D.bodyW, MAT.plate, D.bodyFront - t / 2, mouthTop + upH / 2 + 0.004, 0));
+      subG("PL-02").add(box(t, upH, D.bodyW, MAT.plate,
+        D.bodyFront - t / 2, mouthTop + upH / 2 + 0.004, 0));
     }
     const sideW2 = (D.bodyW - D.mouthW) / 2;
     const cheekH = mouthTop - D.bodyZ;
     for (const s of [1, -1]) {
-      g.add(box(t, cheekH, sideW2, MAT.plate,
+      subG("PL-02").add(box(t, cheekH, sideW2, MAT.plate,
         D.bodyFront - t / 2, D.bodyZ + cheekH / 2, s * (D.mouthW / 2 + sideW2 / 2)));
-    }
-    for (const s of [1, -1]) {
-      g.add(box(skirtRear * 0.85, 0.025, 0.018, MAT.rubber,
+      subG("PL-02").add(box(skirtRear * 0.85, 0.025, 0.018, MAT.rubber,
         D.bodyX0 + skirtRear * 0.5, D.bodyZ + 0.022, s * (D.bodyW / 2 + 0.006)));
     }
-    g.add(box(0.06, 0.008, 0.018, MAT.led, D.bodyFront - 0.02, D.bodyTop - 0.012, 0));
-
-    g.add(box(D.basketL + 0.01, 0.008, 0.012, MAT.frame, D.basketCx, D.bodyTop + 0.004, D.basketW / 2));
-    g.add(box(D.basketL + 0.01, 0.008, 0.012, MAT.frame, D.basketCx, D.bodyTop + 0.004, -D.basketW / 2));
-    g.add(box(0.012, 0.008, D.basketW + 0.01, MAT.frame, D.basketX0, D.bodyTop + 0.004, 0));
+    subG("E-08").add(box(D.basketL + 0.01, 0.008, 0.012, MAT.frame,
+      D.basketCx, D.bodyTop + 0.004, D.basketW / 2));
+    subG("E-08").add(box(D.basketL + 0.01, 0.008, 0.012, MAT.frame,
+      D.basketCx, D.bodyTop + 0.004, -D.basketW / 2));
+    subG("E-08").add(box(0.012, 0.008, D.basketW + 0.01, MAT.frame,
+      D.basketX0, D.bodyTop + 0.004, 0));
     for (const s of [1, -1]) {
-      g.add(box(D.basketL, 0.004, 0.006, MAT.seal, D.basketCx, D.bodyTop + 0.010, s * (D.basketW / 2 - 0.004)));
-    }
-    for (const s of [1, -1]) {
-      g.add(box(0.022, 0.014, 0.018, MAT.metal, D.basketCx, D.bodyTop + 0.008, s * (D.basketW / 2 + 0.012)));
-      g.add(cyl(0.004, 0.020, MAT.metal, D.basketCx, D.bodyTop + 0.008, s * (D.basketW / 2 + 0.022), Math.PI / 2, 0, 0, 12));
-      g.add(cyl(0.008, 0.004, MAT.estop, D.basketCx, D.bodyTop + 0.008, s * (D.basketW / 2 + 0.034), Math.PI / 2, 0, 0, 16));
+      subG("E-08").add(box(D.basketL, 0.004, 0.006, MAT.seal,
+        D.basketCx, D.bodyTop + 0.010, s * (D.basketW / 2 - 0.004)));
+      subG("F-17").add(box(0.022, 0.014, 0.018, MAT.metal,
+        D.basketCx, D.bodyTop + 0.008, s * (D.basketW / 2 + 0.012)));
+      subG("F-17").add(cyl(0.004, 0.020, MAT.metal,
+        D.basketCx, D.bodyTop + 0.008, s * (D.basketW / 2 + 0.022), Math.PI / 2, 0, 0, 12));
+      subG("F-17").add(cyl(0.008, 0.004, MAT.estop,
+        D.basketCx, D.bodyTop + 0.008, s * (D.basketW / 2 + 0.034), Math.PI / 2, 0, 0, 16));
     }
     {
       const ex = D.bodyX0 + 0.04;
-      g.add(box(0.028, 0.012, 0.028, MAT.dark, ex, D.bodyTop + 0.008, 0));
-      g.add(cyl(0.012, 0.018, MAT.estop, ex, D.bodyTop + 0.022, 0, 0, 0, 0, 24));
-      g.add(cyl(0.006, 0.010, MAT.metal, ex, D.bodyTop + 0.034, 0, 0, 0, 0, 16));
+      subG("F-17").add(box(0.028, 0.012, 0.028, MAT.dark, ex, D.bodyTop + 0.008, 0));
+      subG("F-17").add(cyl(0.012, 0.018, MAT.estop, ex, D.bodyTop + 0.022, 0, 0, 0, 0, 24));
+      subG("F-17").add(cyl(0.006, 0.010, MAT.metal, ex, D.bodyTop + 0.034, 0, 0, 0, 0, 16));
     }
+    subG("F-01").add(box(0.014, 0.014, 0.014, MAT.metal,
+      D.bodyCx, D.bodyTop - 0.010, D.bodyW / 2 - 0.012));
+    subG("F-01").add(box(0.014, 0.014, 0.014, MAT.metal,
+      D.bodyCx, D.bodyTop - 0.010, -(D.bodyW / 2 - 0.012)));
+    subG("ACC-CORNER").add(box(0.018, 0.018, 0.004, MAT.metal,
+      D.bodyX0 + 0.02, D.bodyTop - 0.02, D.bodyW / 2 - 0.01));
+    subG("ACC-CORNER").add(box(0.004, 0.018, 0.018, MAT.metal,
+      D.bodyX0 + 0.02, D.bodyTop - 0.02, D.bodyW / 2 - 0.01));
+
     root.add(g);
     parts.body = g;
+    parts.bodySubs = sub;
   }
 
   // ── 球筐 ──
@@ -552,40 +588,59 @@ export function buildRobot() {
     parts.rearDrive = g;
   }
 
-  // 前轮转向
+  // 前轮转向：中置舵机（坐在底板上方）+ 横拉杆 + 主销
   {
     const g = new THREE.Group();
-    const fwX = D.wxFront;
+    const kpX = D.wxFront;
     const wy = D.wy, wr = D.wr, ww = D.ww;
-    const knuckleY = wr + 0.018;
-    const armY = wr + 0.048;
-    const armOut = 0.028;
-    const servoY = D.bodyZ - 0.028;
-    g.add(box(0.048, 0.036, 0.040, MAT.dark, fwX + 0.010, servoY, 0));
-    g.add(box(0.052, 0.005, 0.044, MAT.frame, fwX + 0.010, servoY - 0.018, 0));
-    g.add(box(0.020, 0.024, 0.014, MAT.frame, fwX + 0.010, servoY + 0.016, 0.022));
-    g.add(box(0.020, 0.024, 0.014, MAT.frame, fwX + 0.010, servoY + 0.016, -0.022));
-    g.add(box(0.036, 0.010, 0.056, MAT.frame, fwX + 0.010, D.bodyZ - 0.004, 0));
-    g.add(cyl(0.012, 0.008, MAT.metal, fwX + 0.010, servoY + 0.020, 0, 0, 0, 0, 16));
-    g.add(box(0.010, 0.008, 0.070, MAT.fin, fwX + 0.010, servoY + 0.024, 0.028));
+    const plateTop = D.bodyZ + 0.013;
+    const servoH = 0.022;
+    const armY = plateTop + servoH + 0.006;
+    const armOut = 0.040;
+    const tipZ = wy - armOut;
+    const servoX = kpX - 0.008;
+    const servoY = plateTop + 0.002 + servoH / 2;
 
-    // 前轮组：可绕主销偏转
+    g.add(box(0.050, 0.004, 0.030, MAT.frame, servoX, plateTop + 0.002, 0));
+    g.add(box(0.040, servoH, 0.020, MAT.dark, servoX, servoY, 0));
+    for (const s of [1, -1]) {
+      g.add(box(0.044, 0.005, 0.006, MAT.frame, servoX, plateTop + 0.012, s * 0.013));
+      g.add(cyl(0.0018, 0.008, MAT.bearing, servoX + 0.016, plateTop + 0.012, s * 0.013, 0, 0, 0, 8));
+      g.add(cyl(0.0018, 0.008, MAT.bearing, servoX - 0.016, plateTop + 0.012, s * 0.013, 0, 0, 0, 8));
+    }
+    g.add(cyl(0.0045, 0.014, MAT.metal, servoX, plateTop + servoH + 0.007, 0, 0, 0, 0, 14));
+    g.add(cyl(0.012, 0.006, MAT.metal, servoX, armY - 0.001, 0, 0, 0, 0, 20));
+    const hornLen = 0.028;
+    g.add(box(hornLen, 0.005, 0.012, MAT.fin, servoX + hornLen / 2, armY, 0));
+    g.add(cyl(0.004, 0.008, MAT.bearing, servoX + hornLen, armY, 0, Math.PI / 2, 0, 0, 10));
+
+    const tieX = kpX + 0.010;
+    g.add(cyl(0.0032, tipZ * 2, MAT.metal, tieX, armY, 0, Math.PI / 2, 0, 0, 12));
+    for (const z of [tipZ, 0, -tipZ]) {
+      g.add(cyl(0.0055, 0.008, MAT.bearing, tieX, armY, z, Math.PI / 2, 0, 0, 12));
+    }
+    {
+      const ax = servoX + hornLen, bx = tieX;
+      g.add(box(Math.max(Math.abs(bx - ax), 0.008), 0.004, 0.008, MAT.metal, (ax + bx) / 2, armY, 0));
+    }
+
     const steerGroups = { L: null, R: null };
     for (const s of [1, -1]) {
       const z = s * wy;
-      g.add(box(0.030, 0.014, 0.040, MAT.extrusion, fwX, D.bodyZ + 0.008, s * (wy - 0.055)));
-      g.add(box(0.014, 0.036, 0.014, MAT.frame, fwX, (D.bodyZ + knuckleY) / 2 + 0.01, s * (wy - 0.020)));
-      g.add(cyl(0.008, 0.060, MAT.metal, fwX, knuckleY + 0.022, z, 0, 0, 0, 14));
-      g.add(box(0.032, 0.012, 0.024, MAT.petg, fwX, knuckleY + 0.008, z));
-      g.add(box(0.012, 0.010, armOut, MAT.frame, fwX, armY, z - s * armOut / 2));
-      g.add(cyl(0.005, 0.012, MAT.metal, fwX, armY, z - s * armOut, Math.PI / 2, 0, 0, 10));
-      g.add(box(0.010, 0.012, 0.010, MAT.petg, fwX + 0.018, armY + 0.008, z - s * 0.012));
+      g.add(box(0.028, 0.020, 0.020, MAT.extrusion, kpX, plateTop + 0.010, s * (wy - 0.070)));
+      g.add(box(0.014, 0.040, 0.014, MAT.frame, kpX, plateTop + 0.028, s * (wy - 0.050)));
+      g.add(cyl(0.005, 0.070, MAT.metal, kpX, wr + 0.010, z, 0, 0, 0, 14));
+      g.add(box(0.036, 0.016, 0.028, MAT.petg, kpX, wr + 0.012, z));
+      g.add(cyl(0.005, ww + 0.020, MAT.metal, kpX, wr, z, Math.PI / 2, 0, 0, 12));
+      g.add(box(0.014, 0.008, armOut, MAT.frame, tieX, armY, z - s * armOut / 2));
+      g.add(cyl(0.005, 0.010, MAT.bearing, tieX, armY, z - s * armOut, Math.PI / 2, 0, 0, 10));
+      g.add(box(0.010, 0.010, 0.008, MAT.petg, kpX - 0.018, armY, z - s * 0.010));
 
       const sg = new THREE.Group();
-      sg.position.set(fwX, wr, z);
+      sg.position.set(kpX, wr, z);
       sg.add(cyl(wr, ww, MAT.rubber, 0, 0, 0, Math.PI / 2, 0, 0, 48));
       for (let i = 0; i < 12; i++) {
-        const a = i * Math.PI / 6;
+        const a = (i * Math.PI) / 6;
         sg.add(box(0.006, 0.004, ww * 0.9, MAT.dark,
           (wr - 0.002) * Math.cos(a), (wr - 0.002) * Math.sin(a), 0, 0, 0, a));
       }
@@ -595,16 +650,6 @@ export function buildRobot() {
       g.add(sg);
       steerGroups[s > 0 ? 'L' : 'R'] = sg;
     }
-
-    const linkY = armY;
-    const linkZL = wy - armOut;
-    const linkZR = -(wy - armOut);
-    g.add(cyl(0.004, Math.abs(linkZL - linkZR) + 0.01, MAT.metal,
-      fwX + 0.010, linkY, (linkZL + linkZR) / 2, Math.PI / 2, 0, 0, 12));
-    for (const z of [linkZL, 0.028, linkZR]) {
-      g.add(cyl(0.006, 0.008, MAT.bearing, fwX + 0.010, linkY, z, Math.PI / 2, 0, 0, 12));
-    }
-    g.add(cyl(0.0035, 0.030, MAT.metal, fwX + 0.010, linkY - 0.012, 0.028, 0, 0, 0.15, 10));
     g.userData.steer = steerGroups;
     root.add(g);
     parts.steer = g;

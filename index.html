@@ -1077,72 +1077,66 @@ const rollerPivot = new THREE.Group();
   });
 }
 
-// 前轮转向：中置舵机 + 转向节 + 横拉杆（轮外置，有扫掠空间）
+// 前轮转向：中置舵机坐在底板上方 + 横拉杆 + 主销（可工作机构）
 {
   const g = new THREE.Group();
-  const fwX = D.wxFront;
+  const kpX = D.wxFront;
   const wy = D.wy, wr = D.wr, ww = D.ww;
-  const knuckleY = wr + 0.018; // 主销下端
-  const armY = wr + 0.048;     // 转向臂高度
-  const armOut = 0.028;        // 臂向内侧伸出
+  const plateTop = D.bodyZ + 0.013;   // 底板上表面 ≈48mm
+  const servoH = 0.022;               // MG996R 机体高
+  const armY = plateTop + servoH + 0.006; // 舵盘/拉杆高度 ≈70mm
+  const armOut = 0.040;
+  const tipZ = wy - armOut;
+  const servoX = kpX - 0.008;
+  const servoY = plateTop + 0.002 + servoH / 2;
 
-  // 中置舵机（挂在前横梁下，清晰可见）
-  const servoY = D.bodyZ - 0.028;
-  g.add(box(0.048, 0.036, 0.040, MAT.dark, fwX + 0.010, servoY, 0));
-  g.add(box(0.052, 0.005, 0.044, MAT.frame, fwX + 0.010, servoY - 0.018, 0));
-  // 舵机耳固定到底板
-  g.add(box(0.020, 0.024, 0.014, MAT.frame, fwX + 0.010, servoY + 0.016, 0.022));
-  g.add(box(0.020, 0.024, 0.014, MAT.frame, fwX + 0.010, servoY + 0.016, -0.022));
-  g.add(box(0.036, 0.010, 0.056, MAT.frame, fwX + 0.010, D.bodyZ - 0.004, 0));
-  // 舵盘 + 输出臂（朝左）
-  g.add(cyl(0.012, 0.008, MAT.metal, fwX + 0.010, servoY + 0.020, 0, 0, 0, 0, 16));
-  g.add(box(0.010, 0.008, 0.070, MAT.fin, fwX + 0.010, servoY + 0.024, 0.028));
+  // 座板坐在底板上（禁止挂到 y<bodyZ）
+  g.add(box(0.050, 0.004, 0.030, MAT.frame, servoX, plateTop + 0.002, 0));
+  g.add(box(0.040, servoH, 0.020, MAT.dark, servoX, servoY, 0));
+  for (const s of [1, -1]) {
+    g.add(box(0.044, 0.005, 0.006, MAT.frame, servoX, plateTop + 0.012, s * 0.013));
+    g.add(cyl(0.0018, 0.008, MAT.bearing, servoX + 0.016, plateTop + 0.012, s * 0.013, 0, 0, 0, 8));
+    g.add(cyl(0.0018, 0.008, MAT.bearing, servoX - 0.016, plateTop + 0.012, s * 0.013, 0, 0, 0, 8));
+  }
+  // 输出轴竖直向上 + 舵盘 + 舵臂
+  g.add(cyl(0.0045, 0.014, MAT.metal, servoX, plateTop + servoH + 0.007, 0, 0, 0, 0, 14));
+  g.add(cyl(0.012, 0.006, MAT.metal, servoX, armY - 0.001, 0, 0, 0, 0, 20));
+  const hornLen = 0.028;
+  g.add(box(hornLen, 0.005, 0.012, MAT.fin, servoX + hornLen / 2, armY, 0));
+  g.add(cyl(0.004, 0.008, MAT.bearing, servoX + hornLen, armY, 0, Math.PI / 2, 0, 0, 10));
 
+  // 横拉杆：略前于主销，两端铰接转向臂，中点接舵臂
+  const tieX = kpX + 0.010;
+  g.add(cyl(0.0032, tipZ * 2, MAT.metal, tieX, armY, 0, Math.PI / 2, 0, 0, 12));
+  for (const z of [tipZ, 0, -tipZ]) {
+    g.add(cyl(0.0055, 0.008, MAT.bearing, tieX, armY, z, Math.PI / 2, 0, 0, 12));
+  }
+  g.add(box(Math.max(Math.abs(tieX - (servoX + hornLen)), 0.008), 0.004, 0.008, MAT.metal,
+    (servoX + hornLen + tieX) / 2, armY, 0));
+
+  // 左右主销 + 转向节 + 轮
   for (const s of [1, -1]) {
     const z = s * wy;
-    // 车架外伸支臂（轮在底盘外侧，不卡转向）
-    g.add(box(0.030, 0.014, 0.040, MAT.extrusion,
-      fwX, D.bodyZ + 0.008, s * (wy - 0.055)));
-    g.add(box(0.014, 0.036, 0.014, MAT.frame,
-      fwX, (D.bodyZ + knuckleY) / 2 + 0.01, s * (wy - 0.020)));
-    // 主销 / 转向节
-    g.add(cyl(0.008, 0.060, MAT.metal, fwX, knuckleY + 0.022, z, 0, 0, 0, 14));
-    g.add(box(0.032, 0.012, 0.024, MAT.petg, fwX, knuckleY + 0.008, z));
-    // 转向臂伸向内侧（接横拉杆）
-    g.add(box(0.012, 0.010, armOut, MAT.frame,
-      fwX, armY, z - s * armOut / 2));
-    g.add(cyl(0.005, 0.012, MAT.metal, fwX, armY, z - s * armOut, Math.PI / 2, 0, 0, 10));
-    // 机械限位
-    g.add(box(0.010, 0.012, 0.010, MAT.petg, fwX + 0.018, armY + 0.008, z - s * 0.012));
+    g.add(box(0.028, 0.020, 0.020, MAT.extrusion, kpX, plateTop + 0.010, s * (wy - 0.070)));
+    g.add(box(0.014, 0.040, 0.014, MAT.frame, kpX, plateTop + 0.028, s * (wy - 0.050)));
+    g.add(cyl(0.005, 0.070, MAT.metal, kpX, wr + 0.010, z, 0, 0, 0, 14));
+    g.add(box(0.036, 0.016, 0.028, MAT.petg, kpX, wr + 0.012, z));
+    g.add(cyl(0.005, ww + 0.020, MAT.metal, kpX, wr, z, Math.PI / 2, 0, 0, 12));
+    g.add(box(0.014, 0.008, armOut, MAT.frame, tieX, armY, z - s * armOut / 2));
+    g.add(cyl(0.005, 0.010, MAT.bearing, tieX, armY, z - s * armOut, Math.PI / 2, 0, 0, 10));
+    g.add(box(0.010, 0.010, 0.008, MAT.petg, kpX - 0.018, armY, z - s * 0.010));
 
-    // 随动轮
-    g.add(cyl(wr, ww, MAT.rubber, fwX, wr, z, Math.PI / 2, 0, 0, 48));
+    g.add(cyl(wr, ww, MAT.rubber, kpX, wr, z, Math.PI / 2, 0, 0, 48));
     for (let i = 0; i < 12; i++) {
       const a = i * Math.PI / 6;
       g.add(box(0.006, 0.004, ww * 0.9, MAT.dark,
-        fwX + (wr - 0.002) * Math.cos(a), wr + (wr - 0.002) * Math.sin(a),
+        kpX + (wr - 0.002) * Math.cos(a), wr + (wr - 0.002) * Math.sin(a),
         z, 0, 0, a));
     }
-    g.add(cyl(wr * 0.40, ww + 0.004, MAT.metal, fwX, wr, z, Math.PI / 2, 0, 0));
-    g.add(cyl(0.012, ww + 0.010, MAT.bearing, fwX, wr, z, Math.PI / 2, 0, 0, 20));
-    // 半罩（固定在转向节，随轮转）
-    g.add(box(wr * 1.7, 0.006, ww + 0.018, MAT.petg,
-      fwX, wr + wr + 0.004, z));
+    g.add(cyl(wr * 0.40, ww + 0.004, MAT.metal, kpX, wr, z, Math.PI / 2, 0, 0));
+    g.add(cyl(0.012, ww + 0.010, MAT.bearing, kpX, wr, z, Math.PI / 2, 0, 0, 20));
+    g.add(box(wr * 1.7, 0.006, ww + 0.018, MAT.petg, kpX, wr + wr + 0.004, z));
   }
-
-  // 横拉杆：舵机臂 → 左臂 → 右臂
-  const linkY = armY;
-  const linkZL = wy - armOut;   // 左接点
-  const linkZR = -(wy - armOut);
-  g.add(cyl(0.004, Math.abs(linkZL - linkZR) + 0.01, MAT.metal,
-    fwX + 0.010, linkY, (linkZL + linkZR) / 2, Math.PI / 2, 0, 0, 12));
-  // 球头示意
-  for (const z of [linkZL, 0.028, linkZR]) {
-    g.add(cyl(0.006, 0.008, MAT.bearing, fwX + 0.010, linkY, z, Math.PI / 2, 0, 0, 12));
-  }
-  // 舵机臂到横拉杆的短拉杆
-  g.add(cyl(0.0035, 0.030, MAT.metal,
-    fwX + 0.010, linkY - 0.012, 0.028, 0, 0, 0.15, 10));
 
   reg('steer', g, {
     name: '前轮转向（中置舵机）', color: '#0a0a0a', dims: '1×MG996R · ±30°',

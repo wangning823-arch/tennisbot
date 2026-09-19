@@ -69,12 +69,13 @@
 </head>
 <body>
 <aside>
-  <h1>网球捡球机器人 · E1.3g</h1>
-  <p class="sub">极客套件 · 室外硬地 · <b>无刷 E1.3g</b><br/>离地35 · <b>平台顶125</b>（包高90）· 筋尖68 · Ø152<br/>滚轮≈450RPM · 挡板梁520 · 电池<b>15Ah弹仓</b></p>
+  <h1>网球捡球机器人 · E1.3h</h1>
+  <p class="sub">极客套件 · 室外硬地 · <b>无刷 E1.3h</b><br/>离地35 · <b>平台顶125</b> · 筋尖68 · Ø152<br/>滚轮≈450RPM · 相机梁<b>前滚轮支架外立柱</b><br/>挡板梁520 · 电池<b>15Ah弹仓</b></p>
 
   <div class="note">
-    <b>收集 · E1.3f/g</b><br/>
-    弧道/后挡固定车架；滚轮滑架调 C<br/>
+    <b>收集 · E1.3e/f/h</b><br/>
+    <b>弧道/咬合弧板固定车架</b>（不随滚轮滑条）<br/>
+    滑条只动滚轮+电机 → 改间隙 C 与筋尖高度<br/>
     <b>咬合弧板底缘 y=35=底盘底</b><br/>
     筋尖离地 6.8 · Ø152 · 450RPM<br/>
     <span class="ok">①</span> ToF · <span class="ok">②</span> 筋尖下→弧板咬合<br/>
@@ -87,7 +88,7 @@
   <div class="stat">
     <div><b>平台125</b><span>包高90 · 离地35</span></div>
     <div><b>滚轮450RPM</b><span>筋尖Ø152</span></div>
-    <div><b>双梁上装</b><span>挡板520/相机270</span></div>
+    <div><b>双梁上装</b><span>相机梁@支架/挡板520</span></div>
     <div><b>电池15Ah</b><span>弹仓可换</span></div>
   </div>
 
@@ -129,7 +130,7 @@
     <span id="def-val" style="font-size:11px;color:var(--muted);min-width:42px">0°</span>
   </div>
   <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">
-    收集：轮底进料让位 + 弧板处咬合 + 高速抛入筐。挡板 2 杆固定，板绕螺丝调角；正中 ToF 在摄像头横梁；无刷驱动禁 TB6612。
+    收集：筋尖进料让位 + 弧板处咬合 + 高速抛入筐。<b>弧道/弧板固定车架，滑条只动滚轮</b>。
   </p>
 </aside>
 
@@ -257,6 +258,8 @@ const D = {
   rollWorkD: 0.152,
   get rollZ() { return this.rollBottom + this.rollWorkD / 2; },
   beamY: 0.27,                 // 摄像头梁（绝对高度，相对地面）
+  beamX: 0.21,                 // 相机梁 x：前滚轮支架平面（车架固定）
+  camPostZ: 0.215,             // 前滚轮固定支架外侧立柱 |z|（> rollL/2=0.18，避开滚轮包络）
   deflectorBeamY: 0.52,        // 挡板梁
   finN: 8, finH: 0.012,
 
@@ -561,8 +564,8 @@ const basketGroup = new THREE.Group();
 }
 
 /* ══════════════════════════════════════
-   1.5 frontUnit：滚轮+弧道+护板，X/Y 滑条联动
-   本地几何按默认 D.rollZ 构建；position 承载偏移
+   1.5 frontUnit：【仅】滚轮滑架（滚轮+电机），X/Y 滑条联动
+   弧道/咬合弧板挂在 robot（车架），不在此组
    ══════════════════════════════════════ */
 const BASE_ROLL_X = 0.24;
 const frontUnit = new THREE.Group();
@@ -758,12 +761,12 @@ const rollerPivot = new THREE.Group();
 }
 
 /* ══════════════════════════════════════
-   2b. 收集上装（挂车架）— 弧道：PETG 分段 + UHMW 贴面
+   2b. 上升段弧道 — E1.3e：车架固定，不随滚轮滑条
    ══════════════════════════════════════ */
 {
   const g = new THREE.Group();
-  frontUnit.add(g);
-  const AX = 0, AY = D.rollZ; // frontUnit 本地：滚轮在 x=0
+  // 车架/世界系：对齐默认滚轮位；【禁止】frontUnit.add(g)
+  const AX = BASE_ROLL_X, AY = D.rollZ;
   const chW = D.guideChW;
   const wallH = D.guideWallH;
   const a0 = D.guideA0, a1 = D.guideA1;
@@ -815,9 +818,9 @@ const rollerPivot = new THREE.Group();
   reg('guideArc', g, {
     name: '上升段弧道（车架固定）', color: '#c8ccd2', dims: '不随滚轮 · C可调咬合',
     group: 'collect',
-    desc: 'AF-01 生根车架。滚轮滑架 X/Z 改变筋尖到弧面间隙 C → 咬合力度。咬合挡球靠底缘 y=35 的弧板，本件为上升通道。'
+    desc: 'E1.3e：AF-01 生根车架。【不随】滚轮滑条移动；滑条只动滚轮+电机 → 间隙 C 变化 → 咬合力度可调。'
   });
-  // E1.3f 咬合弧板：底缘 y=35=底盘底
+  // E1.3f 咬合弧板：车架固定，底缘 y=35=底盘底
   {
     const bp = new THREE.Group();
     const y0 = D.bitePlateY0, y1 = D.bitePlateY1;
@@ -827,16 +830,16 @@ const rollerPivot = new THREE.Group();
     bp.add(box(0.008, 0.016, pw * 0.96, MAT.petg, px - 0.010, y1 - 0.004, 0, 0, 0, -0.45));
     for (const s of [1, -1]) {
       bp.add(box(0.030, h, 0.010, MAT.petg, px + 0.008, y0 + h / 2, s * (pw / 2 + 0.005)));
+      bp.add(box(0.014, 0.024, 0.014, MAT.extrusion, px + 0.020, y0 + 0.05, s * (pw / 2 + 0.005)));
     }
     reg('bitePlate', bp, {
-      name: '咬合弧板/后挡', color: '#9aa1a8',
-      dims: '底缘 y=35=底盘底 · 硬约束',
+      name: '咬合弧板/后挡（车架固定）', color: '#9aa1a8',
+      dims: '底缘 y=35 · 不随滚轮',
       group: 'collect',
-      desc: 'E1.3f：底缘必须与底盘底同高 y=35mm，球不可从板下漏过；上部挡球并楔入滚轮形成咬合。车架固定，不随滚轮滑架。'
+      desc: 'E1.3f：底缘 y=35=底盘底；车架固定。滚轮滑架移 XY 时本件不动，才能用间隙 C 调咬合。'
     });
   }
-  robot.remove(g);
-  frontUnit.add(g);
+  // reg() 已挂 robot；禁止 robot.remove + frontUnit.add
   parts.guard = g;
 }
 
@@ -876,13 +879,31 @@ const rollerPivot = new THREE.Group();
     }
   }
 
-  // 横梁（摄像头）— 2020
-  g.add(box(0.020, 0.020, D.bodyW - 0.06, MAT.extrusion, D.beamX, beamH, 0));
-  for (const s of [1, -1]) {
-    const railZ = s * (D.bodyW / 2 - 0.05);
-    g.add(box(0.020, beamH - D.bodyTop, 0.020, MAT.extrusion,
-      D.beamX, (D.bodyTop + beamH) / 2, railZ));
-    g.add(box(0.040, 0.014, 0.032, MAT.frame, D.beamX, D.bodyTop + 0.006, railZ));
+  // ── E1.3h：摄像头梁 E-06B —— 生根在【前滚轮固定支架】外侧 ──
+  // 硬约束：支架立柱 z 必须在滚轮宽度包络之外（|z| > rollL/2），禁止穿进滚轮内部
+  // 支架属车架/前横梁侧固定件，不随滚轮滑架 X/Z 移动
+  {
+    const camZ = D.camPostZ || 0.215;
+    const camX = D.beamX;
+    // 横梁（相机 + 正中 ToF）
+    g.add(box(0.020, 0.020, D.bodyW - 0.04, MAT.extrusion, camX, beamH, 0));
+    for (const s of [1, -1]) {
+      const z = s * camZ;
+      // 外侧立柱：前滚轮固定支架
+      const postH = Math.max(0.04, beamH - D.bodyTop);
+      g.add(box(0.020, postH, 0.020, MAT.extrusion,
+        camX, D.bodyTop + postH / 2, z));
+      // 底座：生根平台/前支架底（车架）
+      g.add(box(0.040, 0.014, 0.032, MAT.frame, camX, D.bodyTop + 0.006, z));
+      g.add(box(0.024, 0.012, 0.028, MAT.frame, camX, beamH - 0.008, z));
+      // 支架侧向连杆 → 车体侧梁（明确“前滚轮支架”而非滚轮本体）
+      g.add(box(0.036, 0.012, 0.014, MAT.frame,
+        camX + 0.01, D.bodyTop + 0.028, (z + s * (D.bodyW / 2 - 0.012)) / 2));
+      // 滚轮外侧防护/支架板（在滚轮 z 包络之外）
+      g.add(box(0.050, Math.max(0.03, beamH - D.bodyTop - 0.01), 0.008, MAT.petg,
+        camX + 0.005, D.bodyTop + (beamH - D.bodyTop) / 2 - 0.005,
+        s * (D.rollL / 2 + 0.022)));
+    }
   }
 
   // 60°挡板：2 根固定杆（角度不变）+ 板绕固定螺丝旋转
@@ -944,13 +965,13 @@ const rollerPivot = new THREE.Group();
   });
 }
 
-// 滑条：滚轮+弧道整体前后/上下微调
+// 滑条：【仅】滚轮滑架（滚轮+轴承+电机）前后/上下；弧道/咬合弧板固定车架
 {
   const slider = document.getElementById('roll-slider');
   const valEl = document.getElementById('roll-val');
   function applyRollX(x) {
     D.rollX = x;
-    applyFrontUnitOffset();
+    applyFrontUnitOffset(); // 只动 frontUnit
     if (valEl) valEl.textContent = x.toFixed(3);
   }
   applyRollX(D.rollX);
@@ -1009,9 +1030,9 @@ const rollerPivot = new THREE.Group();
   g.add(cyl(0.010, 0.012, MAT.glass,
     D.beamX + 0.028, D.beamY + 0.014 + D.mh + 0.012, 0, 0, 0, Math.PI/2));
   reg('camera', g, {
-    name: '摄像头（横梁）', color: '#0c2840', dims: 'UVC · 俯仰−12°',
+    name: '摄像头（前滚轮支架梁）', color: '#0c2840', dims: 'E-06B@270 · 支架外立柱',
     group: 'body',
-    desc: 'UVC 640×480 装在 2020 横梁，俯仰可调约 ±8°。遮光罩防眩光；不随轮转、不随筐拆。'
+    desc: 'UVC 夹在前滚轮固定支架横梁 E-06B；支架立柱 z=±215mm，在滚轮宽度之外，禁止固定在滚轮内部/滑架上。俯仰可调。'
   });
 }
 
@@ -1285,7 +1306,7 @@ const rollerPivot = new THREE.Group();
   reg('tof', g, {
     name: 'ToF 防撞×3', color: '#0c2840', dims: '横梁中 + 左前/右前',
     group: 'body',
-    desc: '正中 VL53L1X 在摄像头梁 y=270；挡板在独立梁 y=520。ESP32 本地 ToF + D_hard；回家 standoff≥35cm。'
+    desc: '正中 VL53L1X + 摄像头装在 **前滚轮固定支架** 上的横梁 E-06B（y=270）。立柱在滚轮 z 包络之外，**不穿滚轮、不随滚轮滑架移动**。挡板在独立梁 y=520。回家 standoff≥35cm。'
   });
 }
 

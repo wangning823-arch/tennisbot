@@ -50,6 +50,7 @@ const D = {
 
   beamY: 0.27,
   beamX: 0.21,
+  camPostZ: 0.215,
 
   basketX0: -0.30, basketL: 0.36, basketW: 0.42,
   basketH: 0.16,
@@ -422,11 +423,12 @@ function buildRobot() {
     parts.rollDrive = g;
   }
 
-  // 弧道
+  // 弧道（E1.3e：root/车架固定，不挂 frontUnit）
   {
     const g = new THREE.Group();
-    frontUnit.add(g);
-    const AX = 0, AY = D.rollZ;
+    root.add(g);
+    const AX = BASE_ROLL_X != null ? BASE_ROLL_X : D.rollX;
+    const AY = D.rollZ;
     const chW = D.guideChW, wallH = D.guideWallH;
     const a0 = D.guideA0, a1 = D.guideA1;
     const surfAt = (a) => ({
@@ -463,6 +465,20 @@ function buildRobot() {
     parts.guard = g;
   }
 
+  // 咬合弧板（车架固定，不随 frontUnit）
+  {
+    const bp = new THREE.Group();
+    const y0 = D.bitePlateY0, y1 = D.bitePlateY1;
+    const h = y1 - y0, px = D.bitePlateX, pw = D.bitePlateW;
+    bp.add(box(0.012, h, pw, MAT.plate, px, y0 + h / 2, 0));
+    bp.add(box(0.020, 0.008, pw, MAT.frame, px - 0.004, y0 + 0.004, 0));
+    for (const s of [1, -1]) {
+      bp.add(box(0.030, h, 0.010, MAT.petg, px + 0.008, y0 + h / 2, s * (pw / 2 + 0.005)));
+    }
+    root.add(bp);
+    parts.bitePlate = bp;
+  }
+
   // 车架上装：护板 + 横梁 + 挡板
   {
     const g = new THREE.Group();
@@ -494,11 +510,12 @@ function buildRobot() {
       }
     }
 
-    g.add(box(0.020, 0.020, D.bodyW - 0.06, MAT.extrusion, D.beamX, beamH, 0));
+    g.add(box(0.020, 0.020, D.bodyW - 0.04, MAT.extrusion, D.beamX, beamH, 0));
+    // E1.3h：前滚轮固定支架外侧立柱（不穿滚轮包络）
     for (const s of [1, -1]) {
-      const railZ = s * (D.bodyW / 2 - 0.05);
-      g.add(box(0.020, beamH - D.bodyTop, 0.020, MAT.extrusion, D.beamX, (D.bodyTop + beamH) / 2, railZ));
-      g.add(box(0.040, 0.014, 0.032, MAT.frame, D.beamX, D.bodyTop + 0.006, railZ));
+      const z = s * (D.camPostZ || 0.215);
+      g.add(box(0.020, beamH - D.bodyTop, 0.020, MAT.extrusion, D.beamX, (D.bodyTop + beamH) / 2, z));
+      g.add(box(0.040, 0.014, 0.032, MAT.frame, D.beamX, D.bodyTop + 0.006, z));
     }
 
     const ddx = D.deflectorX1 - D.deflectorX0;

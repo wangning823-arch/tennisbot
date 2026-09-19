@@ -901,6 +901,7 @@ function updateIntake(dt){
   const spin=bot.parts.roller?.userData?.spinPivot;
   if(spin) spin.rotation.z-=dt*6.2;
   const vIn=0.75,vDrag=0.55,omegaArc=2.8;
+  // E1.3：出口竖直速度按抛高入筐设计点 ≈2.8 m/s（名义滚轮480RPM）
   for(let i=animBalls.length-1;i>=0;i--){
     const b=animBalls[i],m=b.mesh;
     el.stPhase.textContent=PHASE_NAME[b.phase]||'—';
@@ -921,7 +922,7 @@ function updateIntake(dt){
       const k=Math.min(1,b.t/1.2);
       const a=D.guideA0+(D.guideA1-D.guideA0)*k,s=guidePoint(a);
       m.position.set(s.x,Math.max(s.y,BR),0);
-      if(k>=1){b.phase=PHASE.FLING;b.t=0;b.fx=m.position.x;b.fy=m.position.y;b.vx=-0.04;b.vy=1.95}
+      if(k>=1){b.phase=PHASE.FLING;b.t=0;b.fx=m.position.x;b.fy=m.position.y;b.vx=-0.04;b.vy=2.80}
     }else if(b.phase===PHASE.FLING){
       b.t+=dt; const g=5,t=b.t;
       const x=b.fx+b.vx*t, y=b.fy+b.vy*t-0.5*g*t*t;

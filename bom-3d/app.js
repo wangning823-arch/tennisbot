@@ -1713,7 +1713,7 @@ function renderDetailFull(part, moduleId, relatedIds, engineKey) {
       .join("");
     el.innerHTML = `
       <h2>总装图 · KIT-TBR-01</h2>
-      <div class="pid">几何与根目录 index.html 一致 · E1.2</div>
+      <div class="pid">几何与根目录 index.html 一致 · E1.3g（平台顶125 / 无刷 / 15Ah弹仓）</div>
       <div class="meta-grid">
         <div><b>${BOM.parts.length}</b><span>BOM 品种</span></div>
         <div><b>${ENGINE_MODULES.length}</b><span>总装子系统</span></div>

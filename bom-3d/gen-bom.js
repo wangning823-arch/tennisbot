@@ -10,8 +10,10 @@ const parts = [
   P({ id: "E-02", cat: "extrusion", name: "后横梁", spec: "2020 · L420", qty: 1, color: "#2b2e33", dims: "420×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "后端封闭", install: "与 E-01 后端角件连接；后舱围板顶沿对齐。", connects: ["F-01", "F-04", "ACC-CORNER"], model: { type: "extrusion", length: 0.42 }, module: "M1" }),
   P({ id: "E-03", cat: "extrusion", name: "中横梁", spec: "2020 · L420", qty: 1, color: "#2b2e33", dims: "420×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "电池仓分隔", install: "T螺母滑入 E-01 槽，M5×10 锁紧。", connects: ["F-01", "F-04", "ACC-CORNER"], model: { type: "extrusion", length: 0.42 }, module: "M1" }),
   P({ id: "E-04", cat: "extrusion", name: "前横梁", spec: "2020 · L420", qty: 1, color: "#2b2e33", dims: "420×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "前轮/滚轮滑轨根", install: "与 E-01 前端角件连接；E-07 装其上，S-01 舵机座吊梁下中置。", connects: ["F-01", "F-04", "ACC-CORNER", "E-07", "ST-servo"], model: { type: "extrusion", length: 0.42 }, module: "M1" }),
-  P({ id: "E-05", cat: "extrusion", name: "上装立柱", spec: "2020 · L100", qty: 4, color: "#2b2e33", dims: "100×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "平台顶 y=170 → 横梁 y=270", install: "T螺母+M5×10 自平台顶向上；上端角件连 E-06。左右各2。", connects: ["F-01", "F-04", "E-06"], model: { type: "extrusion", length: 0.10 }, module: "M3" }),
-  P({ id: "E-06", cat: "extrusion", name: "挡板横梁", spec: "2020 · L400", qty: 1, color: "#2b2e33", dims: "400×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "摄像头+挡板吊点；正中 ToF", install: "角件+M5×12 装 E-05 顶；x≈0.21 y=0.27。挂 ST-cam/ST-tof/PL-03。", connects: ["F-03", "ACC-CORNER", "ST-cam", "ST-tof", "PL-03"], model: { type: "extrusion", length: 0.40 }, module: "M3" }),
+  P({ id: "E-05", cat: "extrusion", name: "挡板立柱", spec: "2020 · L395", qty: 2, color: "#2b2e33", dims: "395×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "E1.3g：平台顶125→挡板梁520", install: "T螺母+M5×10；顶角件连E-06@520", connects: ["F-01", "F-04", "E-06"], model: { type: "extrusion", length: 0.395 }, module: "M3" }),
+  P({ id: "E-05B", cat: "extrusion", name: "摄像头短柱", spec: "2020 · L145", qty: 2, color: "#2b2e33", dims: "145×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "平台顶125→相机梁270；不承挡板", install: "T螺母+M5×10；顶连E-06B", connects: ["F-01", "E-06B"], model: { type: "extrusion", length: 0.145 }, module: "M3" }),
+  P({ id: "E-06", cat: "extrusion", name: "挡板横梁", spec: "2020 · L400 @ y=520", qty: 1, color: "#2b2e33", dims: "400×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "只吊60°挡板；相机/ToF另梁E-06B@270", install: "角件+M5×12于E-05顶；挂PL-03", connects: ["F-03", "PL-03"], model: { type: "extrusion", length: 0.40 }, module: "M3" }),
+  P({ id: "E-06B", cat: "extrusion", name: "摄像头横梁", spec: "2020 · L400 @ y=270", qty: 1, color: "#2b2e33", dims: "400×20×20 mm", material: "2020 铝型材", tol: "±1 mm", desc: "E1.3g：相机+正中ToF；不承挡板", install: "角件+M5×12于E-05B顶；挂ST-cam/ST-tof", connects: ["F-03", "ST-cam", "ST-tof"], model: { type: "extrusion", length: 0.40 }, module: "M3" }),
   P({ id: "E-07", cat: "extrusion", name: "滚轮滑轨", spec: "2020 · L180 + 30×8 长圆孔", qty: 2, color: "#2b2e33", dims: "180×20×20；槽宽6.2 过M5", material: "2020+铣长圆孔", tol: "孔中心距轨端40", desc: "X±15 / Z28 双调节", install: "装前横梁上方左右；轴承座用 M5 星形手拧螺母锁长圆孔。弧道与滚轮同滑架，面隙65不变。", connects: ["F-01", "F-16", "F-04", "ST-bearing"], model: { type: "extrusion", length: 0.18, slot: true }, module: "M2" }),
   P({ id: "E-08", cat: "extrusion", name: "筐定位轨", spec: "2020 · L360", qty: 2, color: "#2b2e33", dims: "360×20×20 mm", material: "2020 铝型材", tol: "轨间距=筐宽+1", desc: "沿X安装，限制筐Z向", install: "平台顶左右各一条，间距=筐外宽+1mm；后端止挡。筐沿轨推入，F-17 锁定。", connects: ["F-01", "F-17", "ST-corner", "ST-basket"], model: { type: "extrusion", length: 0.36 }, module: "M4" }),
 
@@ -20,19 +22,19 @@ const parts = [
   P({ id: "PL-03", cat: "sheet", name: "60° 挡板", spec: "t2.0 · 工作面≈148×288", qty: 1, color: "#9aa1a8", dims: "板≈148×288×2；翻边36", material: "5052或PETG；贴0.8橡胶", tol: "倾角约60°相对水平", desc: "球撞板弹入筐；绕杆端螺丝±18°", install: "两固定杆自 E-06 吊下不转；板绕杆端M5旋转弧槽锁紧。起点(150,400)终点(85,520)mm。", connects: ["E-06", "F-01", "E-05"], model: { type: "deflector" }, module: "M3" }),
   P({ id: "PL-04", cat: "sheet", name: "滚轮顶护板", spec: "R105 · 包角~75° · 宽360", qty: 1, color: "#c8ccd2", dims: "内R105 宽360 厚3 PETG/1.5铝", material: "PETG 或铝板", tol: "与轮缘径向间隙≥12", desc: "罩滚轮上方", install: "两侧2020立柱生根平台顶；3条筋M3沉头。属车架上装，不随滑轨。", connects: ["E-05", "F-09"], model: { type: "shroud" }, module: "M3" }),
 
-  P({ id: "M-01", cat: "motor", name: "滚轮电机", spec: "JGB37-520 12V 178RPM", qty: 1, color: "#1a1c20", dims: "Ø37 · 轴Ø6 D型 · 约1:34", material: "成品减速电机", tol: "法兰按座孔", desc: "驱动滚轮；GT2 20T；可换无刷", install: "装 ST-motor 抱箍座（裙内），4×M3×8交叉拧；顶丝对D面。堵转>3A/500ms反转。", connects: ["ST-motor", "F-09", "PU-01", "BL-01"], model: { type: "jgb37" }, module: "M2" }),
-  P({ id: "M-02", cat: "motor", name: "后驱电机", spec: "JGB37 12V 250RPM+编码器", qty: 1, color: "#1a1c20", dims: "Ø37 · 编码器尾 · 轮端≈1.31m/s", material: "成品减速电机", tol: "—", desc: "单电机通轴驱动后轮", install: "装后舱底板让位上方；GT2驱动通轴40T。动力/编码器可插拔便于换无刷。", connects: ["ST-motor", "F-09", "PU-01", "BL-02"], model: { type: "jgb37", encoder: true }, module: "M5" }),
+  P({ id: "M-01", cat: "motor", name: "滚轮电机", spec: "无刷 ≈450–500RPM+驱动", qty: 1, color: "#1a1c20", dims: "名义450RPM · 筋尖Ø152", material: "无刷减速电机", tol: "先定型号再打座", desc: "E1.3g；GT2 20T:20T；轮端≥5kg·cm；表面≈3.6m/s 抛高", install: "装滑架电机板 RC-07；XT30；400–520RPM标定；禁TB6612", connects: ["ST-motor", "F-09", "PU-01", "BL-01"], model: { type: "jgb37" }, module: "M2" }),
+  P({ id: "M-02", cat: "motor", name: "后驱电机", spec: "无刷 ≈350RPM+编码 · ≥12kg·cm", qty: 1, color: "#1a1c20", dims: "1:1带轮 · 轮端≈1.65m/s", material: "无刷减速电机", tol: "轮端额定≥12kg·cm", desc: "单电机通轴；里程计=驱动轴+转角；回家靠信标", install: "GT2 20T:20T；无刷驱动≥3A/路；主保险25–40A", connects: ["ST-motor", "F-09", "PU-01", "BL-02"], model: { type: "jgb37", encoder: true }, module: "M5" }),
   P({ id: "S-01", cat: "motor", name: "转向舵机", spec: "MG996R ≥10kg·cm@6V", qty: 1, color: "#2a1810", dims: "40×20×38 mm", material: "金属齿数字舵机", tol: "中位1500μs ±30°≈1100–1900", desc: "前轮中置转向；独立5V≥3A", install: "装 ST-servo 于 E-04 下中置；先校中位再装臂→拉杆→横拉杆。勿与逻辑共小BEC。", connects: ["ST-servo", "F-09", "ST-knuckle", "ACC-LINK"], model: { type: "mg996" }, module: "M5" }),
 
   P({ id: "WH-01", cat: "other", name: "行走轮", spec: "Ø100 PU 实心 · 宽38", qty: 4, color: "#1a1a1a", dims: "Ø100×38 mm", material: "PU实心胎+轮毂", tol: "—", desc: "四轮等大；后驱前转", install: "后轮键/顶丝装SH-02两端；前轮装转向节。轮心 y=50。罩 ST-wheel。", connects: ["SH-02", "ST-knuckle", "ST-wheel", "BR-01"], model: { type: "wheel" }, module: "M5" }),
-  P({ id: "AL-01", cat: "other", name: "滚轮铝管芯", spec: "Ø80×360 · 壁2", qty: 1, color: "#8a9098", dims: "Ø80×360 mm 壁2", material: "6063铝管或PETG芯", tol: "与TPU内孔过盈", desc: "滚轮刚性芯", install: "先与ST-tpu压合/胶接，再穿SH-01；两端端盖压608。", connects: ["ST-tpu", "SH-01", "ST-endcap"], model: { type: "alu_core" }, module: "M2" }),
+  P({ id: "AL-01", cat: "other", name: "滚轮铝管芯", spec: "Ø120×360 · 壁2", qty: 1, color: "#8a9098", dims: "Ø120×360 mm 壁2", material: "6063铝管或PETG芯", tol: "与TPU内孔Ø120过盈", desc: "E1.3：废止Ø80，与TPU内孔闭环", install: "先与ST-tpu压合/胶接，再穿SH-01；两端端盖压608。", connects: ["ST-tpu", "SH-01", "ST-endcap"], model: { type: "alu_core" }, module: "M2" }),
   P({ id: "BR-01", cat: "drive", name: "轴承 608-2RS", spec: "8×22×7 双面橡胶密封", qty: 8, color: "#b0b6bc", dims: "外Ø22×7 · 孔Ø8", material: "轴承钢 2RS", tol: "座孔铰Ø22.0–22.1", desc: "滚轮4 + 前轮4", install: "滚轮每侧两副入端盖/座，预紧间隔套；前轮压入转向节。锂基脂，约3月补。", connects: ["ST-bearing", "SH-01", "ST-endcap", "ST-knuckle"], model: { type: "bearing608" }, module: "M2" }),
   P({ id: "BR-02", cat: "drive", name: "带座轴承", spec: "UCP · 内孔Ø10", qty: 2, color: "#8a9098", dims: "内孔Ø10", material: "铸铁座+轴承", tol: "两座同轴", desc: "后驱通轴支承 z≈±120", install: "M4/M5法兰固定底板；通轴穿过调同轴后锁顶丝。", connects: ["SH-02", "PL-01", "F-07"], model: { type: "pillow" }, module: "M5" }),
   P({ id: "SH-01", cat: "drive", name: "滚轮轴", spec: "Ø8×420 · 两端M6+扁位", qty: 1, color: "#c0c6cc", dims: "Ø8×420 mm", material: "45# 精磨/冷拔", tol: "直线度；两端M6×15", desc: "贯穿TPU滚轮", install: "轴→608×2/侧→端盖→管芯+TPU→另侧轴承。落入滑轨座，挡圈F-14+M6 F-13。", connects: ["BR-01", "ST-endcap", "ST-tpu", "F-13", "F-14", "AL-01"], model: { type: "shaft", d: 0.008, len: 0.42 }, module: "M2" }),
   P({ id: "SH-02", cat: "drive", name: "后驱通轴", spec: "Ø10×460 · 卡簧槽", qty: 1, color: "#c0c6cc", dims: "Ø10×460 mm", material: "冷拔圆钢", tol: "两端卡簧槽/顶丝面", desc: "单电机驱动两后轮", install: "穿BR-02与后轮；PU-03中段顶丝；轮端键/顶丝固定WH-01。", connects: ["BR-02", "PU-03", "F-15", "WH-01"], model: { type: "shaft", d: 0.010, len: 0.46 }, module: "M5" }),
   P({ id: "SH-03", cat: "drive", name: "前轮主销", spec: "Ø8×70", qty: 2, color: "#c0c6cc", dims: "Ø8×70 mm", material: "圆钢", tol: "与转向节孔过渡", desc: "前轮转向节主销", install: "竖直穿ST-knuckle；下端轮轴装轮+608；上端限位；臂接横拉杆。", connects: ["ST-knuckle", "BR-01", "WH-01"], model: { type: "shaft", d: 0.008, len: 0.07 }, module: "M5" }),
-  P({ id: "BL-01", cat: "drive", name: "滚轮同步带", spec: "GT2 闭环 200-2GT-6", qty: 1, color: "#1a1a1a", dims: "周长~200 宽6", material: "GT2橡胶带", tol: "挠度~5", desc: "M-01 20T → PU-02 40T", install: "先套大轮再扳小轮；惰轮压背张紧。L≈2C+π(D1+D2)/2。", connects: ["PU-01", "PU-02", "M-01", "PU-04"], model: { type: "belt", major: 0.045, minor: 0.028 }, module: "M2" }),
-  P({ id: "BL-02", cat: "drive", name: "后驱同步带", spec: "GT2 · 中心距~50", qty: 1, color: "#1a1a1a", dims: "按中心距选周长", material: "GT2同步带", tol: "挠度~5", desc: "M-02 → 通轴40T", install: "小轮上电机轴，大轮上通轴；张紧后锁电机座。", connects: ["PU-01", "PU-03", "M-02"], model: { type: "belt", major: 0.042, minor: 0.026 }, module: "M5" }),
+  P({ id: "BL-01", cat: "drive", name: "滚轮同步带", spec: "GT2 闭环 · 20T:20T", qty: 1, color: "#1a1a1a", dims: "1:1 · 中心距~40–55", material: "GT2橡胶带", tol: "挠度~5", desc: "M-01 20T → PU-S 20T（禁止40T从动）", install: "1:1；惰轮压背张紧。名义滚轮480RPM。", connects: ["PU-01", "PU-02", "M-01", "PU-04"], model: { type: "belt", major: 0.040, minor: 0.026 }, module: "M2" }),
+  P({ id: "BL-02", cat: "drive", name: "后驱同步带", spec: "GT2 · 20T:20T", qty: 1, color: "#1a1a1a", dims: "1:1 · 中心距~50", material: "GT2同步带", tol: "挠度~5", desc: "M-02 → 通轴20T", install: "1:1；张紧后锁电机座。轮端≈350RPM。", connects: ["PU-01", "PU-03", "M-02"], model: { type: "belt", major: 0.040, minor: 0.026 }, module: "M5" }),
   P({ id: "PU-01", cat: "drive", name: "带轮 20T Ø6", spec: "GT2 · 孔Ø6", qty: 2, color: "#8a9098", dims: "齿20 孔Ø6", material: "铝合金", tol: "—", desc: "电机输出轴", install: "套电机Ø6 D轴，顶丝F-15对平面。", connects: ["M-01", "M-02", "F-15"], model: { type: "pulley", teeth: 20, bore: 0.006 }, module: "M2" }),
   P({ id: "PU-02", cat: "drive", name: "带轮 40T Ø6", spec: "GT2 · 孔Ø6", qty: 1, color: "#8a9098", dims: "齿40 孔Ø6", material: "铝合金", tol: "—", desc: "滚轮轴端", install: "装SH-01一端扁位/顶丝，与BL-01啮合。", connects: ["SH-01", "BL-01", "F-15"], model: { type: "pulley", teeth: 40, bore: 0.006 }, module: "M2" }),
   P({ id: "PU-03", cat: "drive", name: "带轮 40T Ø10", spec: "GT2 · 孔Ø10", qty: 1, color: "#8a9098", dims: "齿40 孔Ø10", material: "铝合金", tol: "—", desc: "后驱通轴", install: "装SH-02中段两座之间，顶丝锁紧。", connects: ["SH-02", "BL-02", "F-15"], model: { type: "pulley", teeth: 40, bore: 0.010 }, module: "M5" }),
@@ -42,13 +44,13 @@ const parts = [
   P({ id: "ST-tpu", cat: "print", name: "TPU 滚轮套", spec: "TPU 95A · 外Ø140 螺旋筋", qty: 1, color: "#3a3c40", dims: "外Ø140 内Ø120 宽≈352", material: "TPU95A 层高0.2 筋100%", tol: "与铝管过盈；宽向留端盖", desc: "连续咬球、自洁排沙", install: "水平慢速15–25mm/s打印；套入AL-01；螺旋导程~120 角~15°。勿用PLA。", connects: ["SH-01", "BR-01", "ST-endcap", "AL-01"], stl: "../stl/tpu_roller_sleeve.stl", model: { type: "tpu_sleeve" }, module: "M2" }),
   P({ id: "ST-guide", cat: "print", name: "弧道段", spec: "PETG · R135 · 4段", qty: 4, color: "#c8ccd2", dims: "R135 宽400 壁3+侧60", material: "PETG+内贴UHMW0.5", tol: "弧心角~12°/段", desc: "同轴上升通道 面隙65", install: "4段M3对接；与滚轮同轴同滑轨。入口不封；出口a≈3.20近竖直。", connects: ["ST-tpu", "F-09", "E-07"], stl: "../stl/guide_arc_segment.stl", model: { type: "guide_arc" }, module: "M2" }),
   P({ id: "ST-bearing", cat: "print", name: "608 轴承座", spec: "PETG · 44×44×16", qty: 4, color: "#c8ccd2", dims: "44×44×16 孔Ø22", material: "PETG/ABS 4周长40%", tol: "孔+0.2后铰Ø22.0–22.1", desc: "滚轮轴支承", install: "热熔M4螺母；608密封朝外压入；M4×12固定E-07槽内T母。", connects: ["BR-01", "SH-01", "F-07", "F-08", "E-07"], stl: "../stl/bearing_housing_608.stl", model: { type: "bearing_house" }, module: "M2" }),
-  P({ id: "ST-motor", cat: "print", name: "JGB37 电机座", spec: "PETG · 抱箍Ø37", qty: 2, color: "#c8ccd2", dims: "抱箍Ø37+法兰耳", material: "PETG 4周长40%", tol: "耳孔对齐电机法兰", desc: "固定M-01/M-02", install: "预埋M3热熔；抱箍合上4×M3×8交叉；可垫3mm硅胶减震。", connects: ["M-01", "M-02", "F-09", "F-11"], stl: "../stl/motor_mount_jgb37.stl", model: { type: "motor_mount" }, module: "M2" }),
+  P({ id: "ST-motor", cat: "print", name: "无刷电机座", spec: "PETG · 按选定型号", qty: 2, color: "#c8ccd2", dims: "先冻结型号再出图", material: "PETG 4周长40%", tol: "法兰/耳距按电机", desc: "禁止无型号按JGB37抱箍直接生产", install: "按无刷法兰或转接板；可垫3mm硅胶", connects: ["M-01", "M-02", "F-09", "F-11"], stl: "../stl/motor_mount_jgb37.stl", model: { type: "motor_mount" }, module: "M2" }),
   P({ id: "ST-knuckle", cat: "print", name: "转向节", spec: "PETG · 主销Ø8 臂28", qty: 2, color: "#c8ccd2", dims: "主销孔Ø8 臂长28", material: "PETG 4周长50%", tol: "按SH-03配孔", desc: "前轮转向 左右各一", install: "主销竖直打印；穿SH-03；轮轴装608+轮；臂球头接ACC-LINK。", connects: ["SH-03", "S-01", "BR-01", "F-08", "ACC-LINK", "WH-01"], stl: "../stl/steering_knuckle.stl", model: { type: "knuckle" }, module: "M5" }),
   P({ id: "ST-servo", cat: "print", name: "舵机座", spec: "PETG · 适配40×20", qty: 1, color: "#c8ccd2", dims: "适配MG996R机体", material: "PETG 3周长30%", tol: "槽间隙0.2", desc: "中置舵机座", install: "热熔M3；舵机放入侧面4×M3锁紧；线缆从座后出。", connects: ["S-01", "F-09", "F-11", "E-04"], stl: "../stl/servo_mount_mg996.stl", model: { type: "servo_mount" }, module: "M5" }),
   P({ id: "ST-ecu", cat: "print", name: "电控盒", spec: "PETG · 110×60×48", qty: 1, color: "#c8ccd2", dims: "110×60×48", material: "PETG 开口朝上", tol: "壁3周长", desc: "密封舱 Pi+ESP32", install: "后舱|z|≤55；先BEC/分配再上层主控；护线圈；百叶朝下。", connects: ["ST-lid", "F-11", "U-02", "U-01"], stl: "../stl/ecu_box.stl", model: { type: "ecu_box" }, module: "M6" }),
   P({ id: "ST-lid", cat: "print", name: "电控盖", spec: "PETG · 114×52×5", qty: 1, color: "#c8ccd2", dims: "114×52×5+唇边", material: "PETG", tol: "唇边贴合", desc: "密封盖 免拆整车可开", install: "唇边对准，4×M3×8均匀锁；可加硅胶圈。", connects: ["ST-ecu", "F-09"], stl: "../stl/ecu_lid.stl", model: { type: "ecu_lid" }, module: "M6" }),
-  P({ id: "ST-cam", cat: "print", name: "摄像头支架", spec: "PETG · 夹2020", qty: 1, color: "#c8ccd2", dims: "夹2020 俯仰-12°±8°", material: "PETG 3周长30%", tol: "抗振夹持", desc: "夹E-06装UVC", install: "夹挡板横梁槽M4锁；镜头朝前下俯；USB走梁槽。", connects: ["E-06", "U-03", "F-04"], stl: "../stl/camera_bracket.stl", model: { type: "cam_bracket" }, module: "M7" }),
-  P({ id: "ST-tof", cat: "print", name: "ToF 支架", spec: "PETG · VL53安装面", qty: 3, color: "#c8ccd2", dims: "VL53L1X 安装面", material: "PETG 3周长30%", tol: "光轴无遮挡", desc: "正中横梁；左右前偏30°", install: "M2×6固定；正中对E-06；避开护板/挡板杆光路。", connects: ["U-04", "F-12", "E-06"], stl: "../stl/tof_bracket.stl", model: { type: "tof_bracket" }, module: "M7" }),
+  P({ id: "ST-cam", cat: "print", name: "摄像头支架", spec: "PETG · 夹E-06B@270", qty: 1, color: "#c8ccd2", dims: "夹2020 俯仰-12°±8°", material: "PETG 3周长30%", tol: "抗振夹持", desc: "夹相机梁E-06B装UVC+正中ToF", install: "夹E-06B槽M4锁；镜头朝前下俯；不承挡板", connects: ["E-06B", "U-03", "F-04"], stl: "../stl/camera_bracket.stl", model: { type: "cam_bracket" }, module: "M7" }),
+  P({ id: "ST-tof", cat: "print", name: "ToF 支架", spec: "PETG · VL53安装面", qty: 3, color: "#c8ccd2", dims: "VL53L1X 安装面", material: "PETG 3周长30%", tol: "光轴无遮挡", desc: "正中相机梁y=270；左右前偏30°；回家standoff≥35cm", install: "M2×6；正中对E-06B；I2C分地址", connects: ["U-04", "F-12", "E-06B"], stl: "../stl/tof_bracket.stl", model: { type: "tof_bracket" }, module: "M7" }),
   P({ id: "ST-wheel", cat: "print", name: "轮罩", spec: "PETG · 适配Ø100", qty: 4, color: "#c8ccd2", dims: "适配Ø100×38", material: "PETG 2周长15%", tol: "不擦胎面", desc: "四轮外罩", install: "固定侧向型材/支架；前轮留转角空间。", connects: ["WH-01", "F-01"], stl: "../stl/wheel_cover.stl", model: { type: "wheel_cover" }, module: "M5" }),
   P({ id: "ST-finger", cat: "print", name: "护指条", spec: "PETG · 330×10×12", qty: 1, color: "#c8ccd2", dims: "330×10×12", material: "PETG或金属条", tol: "距轮缘>12", desc: "进料口护指", install: "横跨进料口前缘；刮板可从弧道入口抽出清理。", connects: ["ST-tpu", "PL-01", "ST-guide"], stl: "../stl/finger_guard.stl", model: { type: "finger" }, module: "M2" }),
   P({ id: "ST-corner", cat: "print", name: "筐角件", spec: "PETG · L22×22×160", qty: 8, color: "#c8ccd2", dims: "L22×22×160", material: "PETG 3周长25%", tol: "贴合板厚2", desc: "筐四角竖直角件", install: "固定筐四角板缝；可埋M4作提手螺母。", connects: ["F-17", "E-08", "ST-basket"], stl: "../stl/basket_corner.stl", model: { type: "basket_corner" }, module: "M4" }),
@@ -77,7 +79,8 @@ const parts = [
   P({ id: "U-03", cat: "elec", name: "UVC 摄像头", spec: "640×480 ≥30FPS", qty: 1, color: "#0c2840", dims: "USB免驱", material: "成品模组", tol: "—", desc: "球识别", install: "夹ST-cam；USB带磁环到Pi。", connects: ["ST-cam", "U-01"], model: { type: "camera" }, module: "M7" }),
   P({ id: "U-04", cat: "elec", name: "VL53L1X ToF", spec: "0–4m FOV27°", qty: 3, color: "#22d866", dims: "I2C模块", material: "成品模块", tol: "—", desc: "避障+硬急停", install: "M2装ST-tof；正中对横梁；避开护板遮挡。", connects: ["ST-tof", "F-12", "U-02"], model: { type: "tof" }, module: "M7" }),
   P({ id: "U-05", cat: "elec", name: "TB6612FNG", spec: "双路H桥 建议≥3A/路", qty: 1, color: "#22d866", dims: "驱动模块", material: "成品模块", tol: "—", desc: "后驱+滚轮；勿混无刷", install: "可换板位；PWM接ESP32 LEDC；动力18AWG。", connects: ["U-02", "M-01", "M-02"], model: { type: "driver" }, module: "M6" }),
-  P({ id: "U-08", cat: "elec", name: "3S LiPo 5200", spec: "11.1V ≥30C XT60", qty: 1, color: "#3d5a80", dims: "3S 5200mAh", material: "软包LiPo", tol: "10.5报警/9.9切断", desc: "主动力电池 ≥45min", install: "扎带+EVA限位，导线不承力；XT60+平衡头座；急停串主回路。", connects: ["W-06"], model: { type: "lipo" }, module: "M6" }),
+  P({ id: "U-08", cat: "elec", name: "3S 电池 15000mAh", spec: "11.1V · 弹仓BAT-01 · XT90", qty: 1, color: "#3d5a80", dims: "3S 15000mAh ≈166Wh", material: "21700 3S3P或软包+BMS", tol: "3年后混合≥2h；10.5V/9.9V", desc: "E1.3g：后抽弹仓易换；加宽不加高", install: "BAT-01导轨+卡扣+提手；≤2min换电不拆车架；保险25–40A", connects: ["W-06"], model: { type: "lipo" }, module: "M6" }),
+  P({ id: "U-14", cat: "elec", name: "起点信标柱", spec: "青蓝+AprilTag · Ø80–120×H200–300", qty: 1, color: "#0aa", dims: "standoff≥35cm", material: "柱+底座+打印码", tol: "与网球HSV分离", desc: "可搬“家”；RETURN视觉找柱", install: "车尾卡座运输；开局放置；SAFE_STOP若丢失", connects: ["U-03"], model: { type: "camera" }, module: "M7" }),
   P({ id: "W-06", cat: "wire", name: "XT60 公+母", spec: "电池主回路", qty: 2, color: "#f0c040", dims: "XT60对", material: "尼龙+镀金", tol: "—", desc: "动力插拔", install: "14AWG出线；焊后热缩；防反插。", connects: ["U-08"], model: { type: "xt60" }, module: "M6" }),
   P({ id: "W-07", cat: "wire", name: "JST-SM 2P", spec: "电机接插件", qty: 4, color: "#e8e8e8", dims: "2P", material: "尼龙+端子", tol: "—", desc: "电机可拔 便于换无刷", install: "电机/驱动各一；活动段留15%；波纹管保护。", connects: ["M-01", "M-02", "U-05"], model: { type: "jst" }, module: "M6" }),
 
@@ -149,11 +152,12 @@ const placements = [
 
   // ── M3 导流上装（挂车架，不随滑轨）──
   // 立柱沿Y：x=0.21，z=±0.18，y 中心 0.22（0.17→0.27）
-  { partId: "E-05", pos: [0.21, 0.22, 0.18], rot: [Math.PI / 2, 0, 0] },
-  { partId: "E-05", pos: [0.21, 0.22, -0.18], rot: [Math.PI / 2, 0, 0] },
-  { partId: "E-05", pos: [0.21, 0.22, 0.10], rot: [Math.PI / 2, 0, 0] },
-  { partId: "E-05", pos: [0.21, 0.22, -0.10], rot: [Math.PI / 2, 0, 0] },
-  { partId: "E-06", pos: [0.21, 0.27, 0], rot: [0, 0, 0] },
+  { partId: "E-05", pos: [0.21, 0.32, 0.18], rot: [Math.PI / 2, 0, 0] },
+  { partId: "E-05", pos: [0.21, 0.32, -0.18], rot: [Math.PI / 2, 0, 0] },
+  { partId: "E-05B", pos: [0.21, 0.20, 0.10], rot: [Math.PI / 2, 0, 0] },
+  { partId: "E-05B", pos: [0.21, 0.20, -0.10], rot: [Math.PI / 2, 0, 0] },
+  { partId: "E-06", pos: [0.21, 0.52, 0], rot: [0, 0, 0] },
+  { partId: "E-06B", pos: [0.21, 0.27, 0], rot: [0, 0, 0] },
   // 挡板：工作面中点约 (118, 460)mm，倾角约 60°
   { partId: "PL-03", pos: [0.118, 0.46, 0], rot: [0, 0, Math.atan2(0.12, -0.065)], scale: 2 },
   { partId: "PL-04", pos: [0.24, 0.255, 0], rot: [0, 0, 0], scale: 1.5 },
@@ -269,18 +273,19 @@ const assemblies = [
 ];
 
 const out = path.join(__dirname, "bom-data.js");
-const header = `/* KIT-TBR-01 BOM · E1.2 · 坐标 X前 Y上 Z右；原点=后轮轴投影 */\n`;
+const header = `/* KIT-TBR-01 BOM · E1.3g · 坐标 X前 Y上 Z右；原点=后轮轴投影 */\n`;
 const body =
   header +
   "window.BOM = " +
   JSON.stringify(
     {
-      meta: { kit: "KIT-TBR-01", version: "E1.2", name: "网球自动捡球机器人" },
+      meta: { kit: "KIT-TBR-01", version: "E1.3g", name: "网球自动捡球机器人" },
       audit: [
         { level: "ok", msg: "型材 E-01~E-08 与 §2.2 一致" },
-        { level: "ok", msg: "高度链 底盘35 / 滚轮底68默认 / 平台顶170 与 E1.1 一致" },
-        { level: "ok", msg: "滚轮 Ø140、宽360、轴Ø8×420 与 §3 一致" },
-        { level: "ok", msg: "轮距430、后驱单电机通轴、前轮中置舵机 与 E1.2 一致" },
+        { level: "ok", msg: "E1.3g：平台顶125/包高90 · 电池15Ah弹仓 · 弧板底缘y=35 · 滚轮450RPM" },
+        { level: "ok", msg: "轮距430、后驱单电机通轴、前轮中置舵机" },
+        { level: "ok", msg: "挡板梁y=520（E-05×395）· 相机梁y=270（E-05B×145）" },
+        { level: "ok", msg: "无刷×2；带轮20T:20T；主保险25–40A；信标回家standoff≥35cm" },
         { level: "fix", msg: "E-08 改为沿X安装、限制筐Z向" },
         { level: "fix", msg: "补 WH-01/AL-01/PL-04/ACC-LINK/PU-04/ST-basket" },
         { level: "fix", msg: "E-01 拆分：E-01×2 全长主梁 + E-01B×2 底框短梁" },

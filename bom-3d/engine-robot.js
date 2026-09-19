@@ -1,4 +1,4 @@
-/* KIT-TBR-01 工程化整机几何 · 与根目录 index.html 一致 */
+/* KIT-TBR-01 工程化整机几何 · E1.3g · 与根目录 index.html 一致 */
 (function(){
 /**
  * KIT-TBR-01 完整工程化机器人模型（与 index.html 几何一致）
@@ -7,7 +7,7 @@
 /* uses global THREE */
 
 const D = {
-  bodyX0: -0.30, bodyL: 0.56, bodyW: 0.46, bodyH: 0.135,
+  bodyX0: -0.30, bodyL: 0.56, bodyW: 0.46, bodyH: 0.090,
   bodyZ: 0.035,
   get bodyTop() { return this.bodyZ + this.bodyH; },
   get bodyCx() { return this.bodyX0 + this.bodyL / 2; },
@@ -18,12 +18,17 @@ const D = {
   rollD: 0.14, rollL: 0.36, rollX: 0.24,
   rollBottom: 0.068,
   rollBottomMin: 0.062,
-  rollBottomMax: 0.090,
-  get rollZ() { return this.rollBottom + this.rollD / 2; },
+  rollBottomMax: 0.092,
+  rollWorkD: 0.152,
+  get rollZ() { return this.rollBottom + this.rollWorkD / 2; },
   finN: 8, finH: 0.012,
 
   guideGap: 0.065,
   get guideR() { return this.rollD / 2 + this.guideGap; },
+  bitePlateY0: 0.035,
+  bitePlateY1: 0.120,
+  bitePlateX: 0.185,
+  bitePlateW: 0.40,
   guideA0: 3.70,
   guideA1: 3.20,
   guideChW: 0.40,
@@ -38,6 +43,7 @@ const D = {
   deflectorX1: 0.085,
   deflectorY1: 0.520,
   deflectorT: 0.012,
+  deflectorBeamY: 0.52,
 
   topSlotX0: 0.05, topSlotX1: 0.19, topSlotW: 0.30,
   botSlotX0: 0.10, botSlotX1: 0.28, botSlotW: 0.34,
@@ -47,12 +53,12 @@ const D = {
 
   basketX0: -0.30, basketL: 0.36, basketW: 0.42,
   basketH: 0.16,
-  basketZ0: 0.17,
+  get basketZ0() { return this.bodyTop; },
   get basketTop() { return this.basketZ0 + this.basketH; },
   get basketCx() { return this.basketX0 + this.basketL / 2; },
   get basketFront() { return this.basketX0 + this.basketL; },
 
-  floorZ: 0.17,
+  get floorZ() { return this.bodyTop; },
   doorH: 0.20,
 
   wr: 0.050, ww: 0.038, wy: 0.215,

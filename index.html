@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>网球捡球机器人 · 工程化 E1.0</title>
+<title>网球捡球机器人 · 工程化 E1.3g</title>
 <style>
   :root{
     --bg:#0e1218; --panel:#161c26; --ink:#e8eef4; --muted:#8b9aab;
@@ -69,26 +69,26 @@
 </head>
 <body>
 <aside>
-  <h1>网球捡球机器人 · E1.0</h1>
-  <p class="sub">极客套件 · 室外硬地 · E1.2<br/>离地3.5cm · 轮底6.8cm 可调<br/>后驱单电机通轴 · 前轮中置舵机转向</p>
+  <h1>网球捡球机器人 · E1.3g</h1>
+  <p class="sub">极客套件 · 室外硬地 · <b>无刷 E1.3g</b><br/>离地35 · <b>平台顶125</b>（包高90）· 筋尖68 · Ø152<br/>滚轮≈450RPM · 挡板梁520 · 电池<b>15Ah弹仓</b></p>
 
   <div class="note">
-    <b>进球高度链 · E1.1</b><br/>
-    底盘离地 <b>3.5cm</b> ≪ 球 Ø6.7 → 球进不了车底<br/>
-    轮底默认 <b>6.8cm</b> &gt; 球径 → 球从轮下滚入<br/>
-    轮面→弧面 6.5cm（δ=2mm 咬合）<br/>
-    <span class="ok">①</span> 贴地接近 · ToF 硬限速<br/>
-    <span class="ok">②</span> 从轮底自由滚入，被螺旋筋带走<br/>
-    <span class="ok">③</span> 沿同轴弧上升<br/>
-    <span class="ok">④</span> 竖直撞 60° 挡板 → 弹入筐<br/>
-    <span style="color:var(--muted)">护板/挡板/摄像头挂车架；弧道+滚轮同滑轨；高度可微调</span>
+    <b>收集 · E1.3f/g</b><br/>
+    弧道/后挡固定车架；滚轮滑架调 C<br/>
+    <b>咬合弧板底缘 y=35=底盘底</b><br/>
+    筋尖离地 6.8 · Ø152 · 450RPM<br/>
+    <span class="ok">①</span> ToF · <span class="ok">②</span> 筋尖下→弧板咬合<br/>
+    <span class="ok">③</span> 弧面上升抛送 · <span class="ok">④</span> 撞挡板（梁520）入筐<br/>
+    电池 15Ah · 3年≥2h · 弹仓≤2min换电 · 保险25–40A<br/>
+    信标 standoff≥35cm · 样品30球<br/>
+    <span style="color:var(--muted)">低平台给更高球箱留高度；咬合链按地面绝对高</span>
   </div>
 
   <div class="stat">
-    <div><b>离地3.5cm</b><span>≪球径·不压球</span></div>
-    <div><b>轮底6.8cm</b><span>可调6.2–9.0</span></div>
-    <div><b>弹簧插销</b><span>筐快拆·免工具</span></div>
-    <div><b>IP54级舱</b><span>电控密封+急停</span></div>
+    <div><b>平台125</b><span>包高90 · 离地35</span></div>
+    <div><b>滚轮450RPM</b><span>筋尖Ø152</span></div>
+    <div><b>双梁上装</b><span>挡板520/相机270</span></div>
+    <div><b>电池15Ah</b><span>弹仓可换</span></div>
   </div>
 
   <div class="gt">车体</div><div id="g-body"></div>
@@ -110,11 +110,17 @@
       value="0.24" style="flex:1">
     <span id="roll-val" style="font-size:11px;color:var(--muted);min-width:42px">0.24</span>
   </div>
-  <div style="font-size:11px;color:var(--muted);margin-bottom:4px">轮底高度 Z（离地）</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:4px">筋尖离地 Z（默认68mm）</div>
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-    <input id="rollz-slider" type="range" min="0.062" max="0.090" step="0.001"
+    <input id="rollz-slider" type="range" min="0.062" max="0.092" step="0.001"
       value="0.068" style="flex:1">
     <span id="rollz-val" style="font-size:11px;color:var(--muted);min-width:42px">68mm</span>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:4px">滚轮转速（名义450）</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <input id="rpm-slider" type="range" min="400" max="520" step="10"
+      value="450" style="flex:1">
+    <span id="rpm-val" style="font-size:11px;color:var(--muted);min-width:42px">450RPM</span>
   </div>
   <div style="font-size:11px;color:var(--muted);margin-bottom:4px">挡板角度（绕固定螺丝）</div>
   <div style="display:flex;align-items:center;gap:8px">
@@ -123,7 +129,7 @@
     <span id="def-val" style="font-size:11px;color:var(--muted);min-width:42px">0°</span>
   </div>
   <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">
-    离地 3.5cm 挡球入底；轮底 &gt; Ø6.7 才能进料。挡板 2 杆固定不动，板绕螺丝调角；正中 ToF 在摄像头横梁。
+    收集：轮底进料让位 + 弧板处咬合 + 高速抛入筐。挡板 2 杆固定，板绕螺丝调角；正中 ToF 在摄像头横梁；无刷驱动禁 TB6612。
   </p>
 </aside>
 
@@ -133,24 +139,17 @@
   <div class="phase" id="phase">滚轮转动中…</div>
 </main>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-  }
-}
-</script>
-<script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
+<!-- 经典脚本：资源管理器 file:// 双击可打开（ES module/importmap 在 file 下会被拦） -->
+<script src="./vendor/three.min.js"></script>
+<script src="./vendor/OrbitControls.js"></script>
+<script>
 /* 坐标：X前 / Y上 / Z左右
-   圆柱默认轴Y；rx=π/2 → 轴沿Z（左右） */
+   圆柱默认轴Y；rx=π/2 → 轴沿Z（左右）
+   THREE / THREE.OrbitControls 由上方 UMD 脚本注入全局 */
 
 const wrap = document.getElementById('w');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setSize(wrap.clientWidth, wrap.clientHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -165,7 +164,7 @@ const camera = new THREE.PerspectiveCamera(36, wrap.clientWidth/wrap.clientHeigh
 const homePos = new THREE.Vector3(1.20, 0.60, 0.85);
 camera.position.copy(homePos);
 
-const ctrl = new OrbitControls(camera, renderer.domElement);
+const ctrl = new THREE.OrbitControls(camera, renderer.domElement);
 ctrl.enableDamping = true;
 ctrl.target.set(0, 0.16, 0);
 ctrl.maxPolarAngle = Math.PI * 0.48;
@@ -237,73 +236,71 @@ const MAT = {
   frame:     new THREE.MeshStandardMaterial({ color: 0x2a2e34, metalness: 0.4, roughness: 0.42 }),
 };
 
-// ── 尺寸 ──
-// 工程约束（E1.1）：
-//   底盘离地 3.5cm ≪ 球径 6.7cm → 球进不了车底，高速不压球
-//   滚轮底默认 6.8cm > 球径 → 球可从轮下滚入；高度可微调
+// ── 尺寸（E1.3g 低矮底盘）──
+// 离地 35 mm 不变；底盘包高 90 mm → 平台顶 y=125 mm（原 170）
+// 电池 15Ah 扁平弹仓；滚轮/弧板/挡板梁按地面绝对高度，不随平台降低而改咬合链
 const D = {
-  // 车体：矮平台，离地 3.5cm（原 6cm 接近球高，会压球）
-  bodyX0: -0.30, bodyL: 0.56, bodyW: 0.46, bodyH: 0.135,
+  // 车体：E1.3g 低矮平台，包高 90mm（35→125）
+  bodyX0: -0.30, bodyL: 0.56, bodyW: 0.46, bodyH: 0.090,
   bodyZ: 0.035,
-  get bodyTop() { return this.bodyZ + this.bodyH; },  // 0.17
+  get bodyTop() { return this.bodyZ + this.bodyH; },  // 0.125 E1.3g
   get bodyCx() { return this.bodyX0 + this.bodyL / 2; },
   get bodyFront() { return this.bodyX0 + this.bodyL; }, // 0.26
 
   mouthW: 0.40, mouthH: 0.12, mouthZ: 0.055,
 
-  // 滚轮：底高可调（默认底 6.8cm，可调 6.2–9.0）
-  // rollZ = 底高 + 半径；frontUnit.position.y 做微调
+  // 滚轮：筋尖 Ø152，筋尖离地默认 68，轴心 y=144（相对地面，与平台高度解耦）
   rollD: 0.14, rollL: 0.36, rollX: 0.24,
-  rollBottom: 0.068,              // 默认轮底离地
+  rollBottom: 0.068,
   rollBottomMin: 0.062,
-  rollBottomMax: 0.090,
-  get rollZ() { return this.rollBottom + this.rollD / 2; }, // 默认 0.138
+  rollBottomMax: 0.092,
+  rollWorkD: 0.152,
+  get rollZ() { return this.rollBottom + this.rollWorkD / 2; },
+  beamY: 0.27,                 // 摄像头梁（绝对高度，相对地面）
+  deflectorBeamY: 0.52,        // 挡板梁
   finN: 8, finH: 0.012,
 
-  // 弧道：与滚轮同轴；轮面→弧面 6.5cm（略小于球径 Ø6.7，便于咬球）
-  guideGap: 0.065,              // 轮面→弧面 径向间隙
-  get guideR() { return this.rollD / 2 + this.guideGap; }, // 0.07+0.065=0.135
-  // 出口贴近正后（π）→ 切向近竖直，不斜前抛
-  guideA0: 3.70,                // 后下
-  guideA1: 3.20,                // 近正后略偏下 → 切向≈竖直微后
-  guideChW: 0.40,               // 通道宽（左右壁间距）
+  // 弧道 / 咬合弧板
+  guideGap: 0.065,
+  get guideR() { return this.rollD / 2 + this.guideGap; },
+  bitePlateY0: 0.035,          // 底缘=底盘底
+  bitePlateY1: 0.120,
+  bitePlateX: 0.185,
+  bitePlateW: 0.40,
+  guideA0: 3.70,
+  guideA1: 3.20,
+  guideChW: 0.40,
   guideWallH: 0.060,
 
-  // 滚轮上方护板
   shroudR: 0.105,
   shroudSpan: Math.PI * 0.42,
   shroudStart: 0.40,
 
-  // 顶部挡板：对准弧口上方（出口 x≈0.10），前移抬高
   deflectorX0: 0.150,
   deflectorY0: 0.400,
   deflectorX1: 0.085,
   deflectorY1: 0.520,
   deflectorT: 0.012,
 
-  // 车体开口
   topSlotX0: 0.05, topSlotX1: 0.19, topSlotW: 0.30,
   botSlotX0: 0.10, botSlotX1: 0.28, botSlotW: 0.34,
 
-  // 横梁
-  beamY: 0.27,
   beamX: 0.21,
 
-  // 可拆卸球筐
+  // 可拆卸球筐：坐在平台顶（E1.3g=0.125）
   basketX0: -0.30, basketL: 0.36, basketW: 0.42,
   basketH: 0.16,
-  basketZ0: 0.17,
+  get basketZ0() { return this.bodyTop; },
   get basketTop() { return this.basketZ0 + this.basketH; },
   get basketCx() { return this.basketX0 + this.basketL / 2; },
-  get basketFront() { return this.basketX0 + this.basketL; }, // 0.06
+  get basketFront() { return this.basketX0 + this.basketL; },
 
-  floorZ: 0.17,
+  get floorZ() { return this.bodyTop; },
   doorH: 0.20,
 
-  // 四轮等大：轮距加宽，前轮外八有转向空间
   wr: 0.050, ww: 0.038, wy: 0.215,
-  wxFront: 0.040,              // 筐前下沿
-  wxRear: -0.280,              // 筐后
+  wxFront: 0.040,
+  wxRear: -0.280,
   mh: 0.045,
 };
 
@@ -479,9 +476,9 @@ function reg(key, g, o) {
   }
 
   reg('body', g, {
-    name: '车架总成（离地35mm）', color: '#9aa1a8', dims: '离地3.5 · 型材+铝板',
+    name: '车架总成（E1.3g 低矮）', color: '#9aa1a8', dims: '离地35 · 包高90 · 平台125',
     group: 'body',
-    desc: '离地 3.5cm（≪球径 Ø6.7），高速时网球进不了车底。2020 骨架 + 2mm 铝板；后驱电机开让位孔；含密封条、弹簧插销、主回路急停。'
+    desc: 'E1.3g：离地 35mm 不变；底盘包高压到 90mm（平台顶 y=125，原 170）。电池仓加宽扁平，不靠加高塞 15Ah。2020+2mm 铝板；后驱让位孔；急停在后上角。'
   });
 }
 
@@ -557,9 +554,9 @@ const basketGroup = new THREE.Group();
         D.basketX0 + 0.12 + ix * 0.075, fy + 0.055, -0.07 + iz * 0.075));
 
   reg('basket', g, {
-    name: '可拆卸球筐（快拆）', color: '#e85d04', dims: '36×42×16 · 插销',
+    name: '可拆卸球筐（快拆）', color: '#e85d04', dims: '36×42×16 · 坐平台顶125',
     group: 'basket',
-    desc: '2mm PETG/PP 筐 + 排水孔 + 侧向观察孔 + PETG 角件。弹簧插销快拆，提手埋螺母；实用容量 25–35 球。'
+    desc: '坐在 E1.3g 平台顶 y=125（原170）。2mm 板+排水孔+弹簧插销快拆；实用 25–35 球（标称30）。低平台为更高筐/容量版留高度。'
   });
 }
 
@@ -574,7 +571,7 @@ robot.add(frontUnit);
 // 当前滚轮姿态（世界系轴）
 const rollAdj = { bottom: D.rollBottom };
 function rollAxisX() { return D.rollX; }
-function rollAxisY() { return rollAdj.bottom + D.rollD / 2; }
+function rollAxisY() { return rollAdj.bottom + (D.rollWorkD || 0.152) / 2; }
 function rollBottomY() { return rollAdj.bottom; }
 function applyFrontUnitOffset() {
   frontUnit.position.x = D.rollX;
@@ -596,7 +593,7 @@ const rollerPivot = new THREE.Group();
   rollerPivot.position.set(0, D.rollZ, 0); // 本地
   g.add(rollerPivot);
 
-  // 铝管芯
+  // 铝管芯 Ø120（= TPU 内孔，E1.3）
   rollerPivot.add(cyl(D.rollD / 2 - 0.010, D.rollL, MAT.rollCore,
     0, 0, 0, Math.PI / 2, 0, 0, 48));
   // TPU 外套
@@ -668,16 +665,16 @@ const rollerPivot = new THREE.Group();
 
   g.userData.spinPivot = rollerPivot;
   reg('roller', g, {
-    name: '滚轮（高度可调）', color: '#4a4c50', dims: '底68mm · 调62–90',
+    name: '滚轮（高度可调）', color: '#4a4c50', dims: '筋尖68mm · 450RPM',
     group: 'collect',
-    desc: '铝管芯+TPU螺旋筋。轮底默认离地68mm（>Ø67 可入球），竖槽微调 62–90mm；前后滑轨±15mm。护指条随动。'
+    desc: 'E1.3e：弧道/后挡固定车架；仅滚轮滑架 X/Z 可调（电机同架）。调节=改轮弧间隙C与筋尖高度→咬合力度。筋尖Ø152/68mm/轴心144；450RPM。示意槽勿当施工图。'
   });
   robot.remove(g);
   frontUnit.add(g);
 }
 
 /* ══════════════════════════════════════
-   2c. 滚轮驱动：JGB37-520 + GT2 同步带（内侧）
+   2c. 滚轮驱动：无刷减速 + GT2 20T:20T（内侧）
    ══════════════════════════════════════ */
 {
   const g = new THREE.Group();
@@ -686,15 +683,15 @@ const rollerPivot = new THREE.Group();
   // frontUnit 本地：滚轮轴在 x=0（父级已含 D.rollX）
   const motorX = -0.02;
 
-  // JGB37-520 风格：电机筒 + 减速箱 + 出轴
+  // 无刷减速电机示意：定子筒 + 驱动仓 + 出轴
   g.add(cyl(0.024, 0.055, MAT.dark, motorX, motorY, motorZ, Math.PI / 2, 0, 0, 32));
-  g.add(cyl(0.028, 0.028, MAT.metal, motorX, motorY, motorZ + 0.042, Math.PI / 2, 0, 0, 32));
-  // 减速箱端盖螺钉
+  g.add(cyl(0.026, 0.022, MAT.frame, motorX, motorY, motorZ + 0.040, Math.PI / 2, 0, 0, 32));
+  g.add(box(0.020, 0.016, 0.012, MAT.led, motorX + 0.010, motorY - 0.028, motorZ + 0.020));
   for (let i = 0; i < 4; i++) {
     const a = i * Math.PI / 2;
     g.add(cyl(0.002, 0.003, MAT.bearing,
-      motorX + 0.020 * Math.cos(a), motorY + 0.020 * Math.sin(a),
-      motorZ + 0.058, Math.PI / 2, 0, 0, 6));
+      motorX + 0.018 * Math.cos(a), motorY + 0.018 * Math.sin(a),
+      motorZ + 0.052, Math.PI / 2, 0, 0, 6));
   }
   g.add(cyl(0.006, 0.018, MAT.metal, motorX, motorY, motorZ + 0.068, Math.PI / 2, 0, 0, 12));
   // 安装耳
@@ -712,14 +709,13 @@ const rollerPivot = new THREE.Group();
   g.add(box(0.030, 0.014, 0.024, MAT.frame,
     motorX - 0.010, D.bodyZ + 0.02, motorZ - 0.008));
 
-  // GT2 带轮 20T/40T（从动轮在滚轮轴 local x=0）
-  const pulleyR1 = 0.020;
+  // GT2 带轮 20T:20T（1:1，名义 480 RPM → 表面 ≈3.5 m/s）
+  const pulleyR1 = 0.014;
   const pulleyR2 = 0.014;
   const beltZ = motorZ - 0.012;
-  g.add(cyl(pulleyR1, 0.012, MAT.metal, 0, D.rollZ, beltZ, Math.PI / 2, 0, 0, 24));
+  g.add(cyl(pulleyR1, 0.012, MAT.metal, 0, D.rollZ, beltZ, Math.PI / 2, 0, 0, 20));
   g.add(cyl(pulleyR2, 0.012, MAT.metal, motorX, motorY, beltZ, Math.PI / 2, 0, 0, 20));
-  // 齿形示意（外缘细环）
-  g.add(cyl(pulleyR1 + 0.001, 0.008, MAT.rubber, 0, D.rollZ, beltZ, Math.PI / 2, 0, 0, 24));
+  g.add(cyl(pulleyR1 + 0.001, 0.008, MAT.rubber, 0, D.rollZ, beltZ, Math.PI / 2, 0, 0, 20));
   g.add(cyl(pulleyR2 + 0.001, 0.008, MAT.rubber, motorX, motorY, beltZ, Math.PI / 2, 0, 0, 20));
   // 张紧惰轮
   const midX = motorX / 2 + 0.004;
@@ -739,7 +735,7 @@ const rollerPivot = new THREE.Group();
     motorX / 2, (D.rollZ + motorY) / 2 - (pulleyR1 + pulleyR2) / 2,
     beltZ, 0, 0, beltAng));
 
-  // 驱动线：波纹管示意 + 接插件（目标世界 x≈0.02 → 局部 0.02-rollX）
+  // 驱动线：波纹管示意 + 接插件
   const ecuLocalX = 0.02 - D.rollX;
   const wirePts = [
     new THREE.Vector3(motorX, motorY - 0.03, motorZ - 0.02),
@@ -751,13 +747,12 @@ const rollerPivot = new THREE.Group();
     new THREE.CatmullRomCurve3(wirePts), 20, 0.0035, 6, false
   );
   g.add(new THREE.Mesh(wireGeo, MAT.hole));
-  // JST 接插件示意
   g.add(box(0.010, 0.006, 0.008, MAT.white, motorX - 0.03, motorY - 0.032, motorZ - 0.018));
 
   reg('rollDrive', g, {
-    name: '滚轮电机+GT2带', color: '#1a1c20', dims: 'JGB37 · 张紧惰轮',
+    name: '滚轮电机+GT2带', color: '#1a1c20', dims: '无刷 · 20T:20T · 450RPM',
     group: 'collect',
-    desc: 'JGB37-520 12V 减速电机内侧安装，GT2 同步带 + 惰轮张紧驱动滚轮轴。堵转电流检测反转保护。'
+    desc: '无刷 + GT2 20T:20T，名义450RPM（筋尖Ø152表面≈3.6m/s）。轮端≥5kg·cm。现场400–520RPM标定。'
   });
   frontUnit.add(g);
 }
@@ -817,11 +812,29 @@ const rollerPivot = new THREE.Group();
       )));
   }
 
-  reg('guardLocal', g, {
-    name: '同轴弧道（PETG）', color: '#c8ccd2', dims: '4段 · UHMW贴面',
+  reg('guideArc', g, {
+    name: '上升段弧道（车架固定）', color: '#c8ccd2', dims: '不随滚轮 · C可调咬合',
     group: 'collect',
-    desc: '与滚轮同轴；PETG 3mm 分段 + UHMW 低摩擦贴面。面隙 6.5cm，入口开，含可拆刮板。'
+    desc: 'AF-01 生根车架。滚轮滑架 X/Z 改变筋尖到弧面间隙 C → 咬合力度。咬合挡球靠底缘 y=35 的弧板，本件为上升通道。'
   });
+  // E1.3f 咬合弧板：底缘 y=35=底盘底
+  {
+    const bp = new THREE.Group();
+    const y0 = D.bitePlateY0, y1 = D.bitePlateY1;
+    const h = y1 - y0, px = D.bitePlateX, pw = D.bitePlateW;
+    bp.add(box(0.012, h, pw, MAT.plate, px, y0 + h / 2, 0));
+    bp.add(box(0.020, 0.008, pw, MAT.frame, px - 0.004, y0 + 0.004, 0));
+    bp.add(box(0.008, 0.016, pw * 0.96, MAT.petg, px - 0.010, y1 - 0.004, 0, 0, 0, -0.45));
+    for (const s of [1, -1]) {
+      bp.add(box(0.030, h, 0.010, MAT.petg, px + 0.008, y0 + h / 2, s * (pw / 2 + 0.005)));
+    }
+    reg('bitePlate', bp, {
+      name: '咬合弧板/后挡', color: '#9aa1a8',
+      dims: '底缘 y=35=底盘底 · 硬约束',
+      group: 'collect',
+      desc: 'E1.3f：底缘必须与底盘底同高 y=35mm，球不可从板下漏过；上部挡球并楔入滚轮形成咬合。车架固定，不随滚轮滑架。'
+    });
+  }
   robot.remove(g);
   frontUnit.add(g);
   parts.guard = g;
@@ -973,6 +986,19 @@ const rollerPivot = new THREE.Group();
   if (defSlider) {
     defSlider.addEventListener('input', () => applyDeflectorDeg(parseFloat(defSlider.value)));
   }
+
+  // 滚轮名义转速（E1.3 抛高标定，不改几何，仅记录）
+  const rpmSlider = document.getElementById('rpm-slider');
+  const rpmVal = document.getElementById('rpm-val');
+  let rollerRpm = 480;
+  function applyRollerRpm(n) {
+    rollerRpm = n;
+    if (rpmVal) rpmVal.textContent = n + 'RPM';
+  }
+  applyRollerRpm(450);
+  if (rpmSlider) {
+    rpmSlider.addEventListener('input', () => applyRollerRpm(parseInt(rpmSlider.value, 10)));
+  }
 }
 
 // 摄像头：装在滚轮正上方横梁（车体固定，高度适中）
@@ -990,12 +1016,12 @@ const rollerPivot = new THREE.Group();
 }
 
 /* ══════════════════════════════════════
-   3. 行走轮系（E1.2）
-   后轮：单电机 + 通轴（两轮同速）
+   3. 行走轮系（E1.2/E1.3）
+   后轮：单无刷电机 + 通轴（两轮同速）
    前轮：中置单舵机 + 横拉杆转向（±30°）
-   轮距加宽 215mm，前轮外置有转向空间
+   轮距 430mm（半宽 215mm）
    ══════════════════════════════════════ */
-// 后驱：1×JGB37-520 中置 + 通轴 + 左右轮
+// 后驱：1×无刷减速 ≈350RPM 中置 + 通轴 + 左右轮
 {
   const g = new THREE.Group();
   const wx = D.wxRear, wy = D.wy, wr = D.wr, ww = D.ww;
@@ -1029,8 +1055,8 @@ const rollerPivot = new THREE.Group();
       wx, wr + wr + 0.006, z));
   }
 
-  // 轴上大带轮
-  g.add(cyl(0.028, 0.014, MAT.metal, wx, wr, 0, Math.PI / 2, 0, 0, 28));
+  // 轴上带轮 20T（与电机 20T 同径，1:1）
+  g.add(cyl(0.014, 0.014, MAT.metal, wx, wr, 0, Math.PI / 2, 0, 0, 20));
 
   // 中置减速电机（略抬高，经同步带驱动通轴）
   const moX = wx + 0.045, moY = wr + 0.042, moZ = 0;
@@ -1046,7 +1072,7 @@ const rollerPivot = new THREE.Group();
   g.add(box(0.030, 0.012, 0.028, MAT.frame, moX, D.bodyZ + 0.012, moZ));
   g.add(box(0.024, 0.004, 0.022, MAT.seal, moX, D.bodyZ + 0.020, moZ));
 
-  // 电机小带轮 + 同步带
+  // 电机小带轮 20T + 同步带（1:1）
   g.add(cyl(0.014, 0.012, MAT.metal, moX, moY, moZ + 0.012, Math.PI / 2, 0, 0, 20));
   {
     const dx = wx - moX, dy = wr - moY;
@@ -1071,9 +1097,9 @@ const rollerPivot = new THREE.Group();
   ));
 
   reg('rearDrive', g, {
-    name: '后驱（单电机通轴）', color: '#1a1c20', dims: '1×JGB37 · Ø100×2',
+    name: '后驱（单电机通轴）', color: '#1a1c20', dims: '无刷≈350RPM · ≥12kg·cm',
     group: 'drive',
-    desc: '1 台 JGB37-520 中置，GT2 带驱动后通轴，左右轮同速。前轮负责转向，后轮只驱动；比双电机省一套驱动与编码器。'
+    desc: '1 台无刷减速 ≈350RPM + 编码，GT2 20T:20T，轮端额定≥12kg·cm，理论≈1.65m/s。里程计=驱动轴+转角；回家靠信标。'
   });
 }
 
@@ -1146,26 +1172,25 @@ const rollerPivot = new THREE.Group();
 }
 {
   const g = new THREE.Group();
-  // 3S 5200mAh 电池包 + 阻燃袋示意
-  const bx = -0.10, by = D.bodyZ + 0.025, bz = 0.0;
-  g.add(box(0.15, 0.045, 0.11, MAT.dark, bx, by, bz));
-  g.add(box(0.154, 0.048, 0.114, MAT.seal, bx, by - 0.001, bz)); // 阻燃袋
-  // XT60 插头
-  g.add(box(0.016, 0.012, 0.014, MAT.estop, bx + 0.080, by + 0.005, bz));
-  g.add(box(0.008, 0.008, 0.008, MAT.metal, bx + 0.090, by + 0.005, bz));
-  // 主开关
-  g.add(box(0.018, 0.010, 0.012, MAT.metal, bx + 0.072, by + 0.018, bz + 0.02));
-  // 保险丝座
-  g.add(box(0.012, 0.008, 0.020, MAT.white, bx + 0.072, by + 0.018, bz - 0.02));
-  // EVA 泡棉限位
-  g.add(box(0.02, 0.040, 0.10, MAT.seal, bx - 0.08, by, bz));
-  g.add(box(0.02, 0.040, 0.10, MAT.seal, bx + 0.08, by, bz));
-  // 低压报警 LED
-  g.add(cyl(0.003, 0.003, MAT.led, bx + 0.055, by + 0.020, bz + 0.048, Math.PI/2, 0, 0, 10));
-  // 出线
+  // E1.3g：3S 15000mAh 扁平包 + 后抽弹仓示意（加宽不加高）
+  const bx = -0.08, by = D.bodyZ + 0.028, bz = 0.0;
+  g.add(box(0.20, 0.042, 0.13, MAT.dark, bx, by, bz));
+  g.add(box(0.204, 0.045, 0.134, MAT.seal, bx, by - 0.001, bz));
+  // 弹仓滑轨 + 卡扣 + 提手
+  for (const s of [1, -1]) {
+    g.add(box(0.20, 0.006, 0.008, MAT.frame, bx, by - 0.022, s * 0.072));
+  }
+  g.add(box(0.030, 0.008, 0.012, MAT.metal, bx + 0.10, by + 0.022, 0));
+  g.add(box(0.012, 0.016, 0.040, MAT.petg, bx + 0.095, by + 0.028, 0));
+  // XT90
+  g.add(box(0.018, 0.014, 0.016, MAT.estop, bx + 0.105, by + 0.005, 0));
+  g.add(box(0.008, 0.008, 0.008, MAT.metal, bx + 0.114, by + 0.005, 0));
+  // 保险丝座（25–40A）
+  g.add(box(0.014, 0.010, 0.022, MAT.white, bx + 0.070, by + 0.020, -0.03));
+  g.add(cyl(0.003, 0.003, MAT.led, bx + 0.055, by + 0.020, 0.048, Math.PI/2, 0, 0, 10));
   const pts = [
-    new THREE.Vector3(bx + 0.06, by, bz + 0.04),
-    new THREE.Vector3(bx + 0.10, by + 0.01, 0.08),
+    new THREE.Vector3(bx + 0.08, by, 0.03),
+    new THREE.Vector3(bx + 0.12, by + 0.01, 0.08),
     new THREE.Vector3(-0.02, D.bodyZ + 0.05, 0.12),
   ];
   g.add(new THREE.Mesh(
@@ -1173,9 +1198,9 @@ const rollerPivot = new THREE.Group();
     MAT.hole
   ));
   reg('battery', g, {
-    name: '电池包（3S+保护）', color: '#1a1a1a', dims: '5200mAh · XT60',
+    name: '电池包（3S 15000mAh · 弹仓）', color: '#1a1a1a', dims: '15Ah · XT90 · 后抽',
     group: 'drive',
-    desc: '3S 5200mAh + 阻燃袋 + EVA 限位。XT60 主回路、拨动开关、5A 保险；低压 10.5V 报警 / 9.9V 切断。'
+    desc: 'E1.3g：标称 15000 mAh；3 年后混合工况 ≥2 h。BAT-01 后抽弹仓（导轨+卡扣+提手），更换 ≤2 min，不拆车架/滚轮。XT90；主保险 25–40 A。充电优先整包取出平衡充。'
   });
 }
 
@@ -1260,7 +1285,7 @@ const rollerPivot = new THREE.Group();
   reg('tof', g, {
     name: 'ToF 防撞×3', color: '#0c2840', dims: '横梁中 + 左前/右前',
     group: 'body',
-    desc: '正中 VL53L1X 装在摄像头横梁（车架固定，不随滚轮调高度）；左右前在前脸口侧。ESP32 本地 50Hz + D_hard 急停。'
+    desc: '正中 VL53L1X 在摄像头梁 y=270；挡板在独立梁 y=520。ESP32 本地 ToF + D_hard；回家 standoff≥35cm。'
   });
 }
 
@@ -1393,9 +1418,9 @@ function updateAnim(dt) {
         b.t = 0;
         b.fx = m.position.x;
         b.fy = m.position.y;
-        // 近竖直上冲（略带后向分量，不斜前抛）
+        // 近竖直上冲（E1.3：vy≈2.8 撞挡板入筐）
         b.vx = -0.04;
-        b.vy = 1.95;
+        b.vy = 2.80;
       }
       phaseEl.textContent = '③ 沿同轴弧上升（隙≥6cm）';
 
@@ -1489,6 +1514,8 @@ let selected = null;
 let wire = false;
 
 meta.forEach(p => {
+  const host = G[p.group] || G.body;
+  if (!host) return;
   const b = document.createElement('button');
   b.className = 'pb';
   b.dataset.k = p.key;
@@ -1496,7 +1523,7 @@ meta.forEach(p => {
     `<span class="sw" style="background:${p.color}"></span>` +
     `<span>${p.name}</span><span class="dm">${p.dims}</span>`;
   b.onclick = () => focus(p.key);
-  G[p.group].appendChild(b);
+  host.appendChild(b);
 });
 
 function clearHighlight() {
@@ -1610,7 +1637,7 @@ window.addEventListener('resize', () => {
 
 // 初始：侧前低视角，能同时看到口、滚轮、内腔
 camera.position.set(1.15, 0.55, 0.80);
-ctrl.target.set(0.05, 0.12, 0);
+ctrl.target.set(0.05, 0.14, 0);  // 略抬：平台顶 125，筐与滚轮区
 ctrl.update();
 </script>
 </body>
